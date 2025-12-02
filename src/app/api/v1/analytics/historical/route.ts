@@ -48,12 +48,12 @@ export async function GET(request: NextRequest) {
     const lastHour = new Date();
     lastHour.setHours(lastHour.getHours() - 1);
 
-    const routeBreakdown = await db.trainSnapshot.groupBy({
+    const routeBreakdown: { routeId: string; _count: { tripId: number } }[] = await db.trainSnapshot.groupBy({
       by: ['routeId'],
       where: { createdAt: { gte: lastHour } },
       _count: { tripId: true },
       orderBy: { _count: { tripId: 'desc' } },
-    }).catch(() => [] as { routeId: string; _count: { tripId: number } }[]);
+    }).catch(() => []);
 
     // Get delay distribution from arrival events (simplified)
     const arrivals = await db.arrivalEvent.findMany({
