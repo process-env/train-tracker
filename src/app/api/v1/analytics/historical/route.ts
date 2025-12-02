@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
       where: { createdAt: { gte: lastHour } },
       _count: { tripId: true },
       orderBy: { _count: { tripId: 'desc' } },
-    }).catch(() => []);
+    }).catch(() => [] as { routeId: string; _count: { tripId: number } }[]);
 
     // Get delay distribution from arrival events (simplified)
     const arrivals = await db.arrivalEvent.findMany({
