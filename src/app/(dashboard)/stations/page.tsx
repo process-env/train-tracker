@@ -1,0 +1,83 @@
+'use client';
+
+import { useState, useEffect, useMemo } from 'react';
+import { Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { StationCard } from '@/components/stations';
+import { useStationsStore } from '@/stores';
+import { isParentStation } from '@/lib/mta/station-utils';
+
+export default function StationsPage() {
+  const [search, setSearch] = useState('');
+  const { stations, loadStaticData, isLoading } = useStationsStore();
+
+  useEffect(() => {
+    loadStaticData();
+  }, [loadStaticData]);
+
+  // Filter to parent stations only and apply search
+  const filteredStations = useMemo(() => {
+    const stationList = Object.values(stations).filter(isParentStation);
+
+    if (!search.trim()) return stationList;
+
+    const query = search.toLowerCase();
+    return stationList.filter(
+      (s) =>
+        s.name.toLowerCase().includes(query) ||
+        s.enrichedName?.toLowerCase().includes(query) ||
+        s.routes?.toLowerCase().includes(query)
+    );
+  }, [stations, search]);
+
+  return (
+    <div className="p-6 space-y-6 overflow-y-auto h-full">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold">Stations</h1>
+        <p className="text-muted-foreground">
+          Browse all {Object.keys(stations).length > 0 ? filteredStations.length : '—'} NYC subway stations
+        </p>
+      </div>
+
+      {/* Search */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search stations or routes..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+
+      {/* Station List */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(12)].map((_, i) => (
+            <Skeleton key={i} className="h-[100px]" />
+          ))}
+        </div>
+      ) : filteredStations.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground">
+          <p>No stations found</p>
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="text-primary mt-2 hover:underline"
+            >
+              Clear search
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
+          {filteredStations.map((station) => (
+            <StationCard key={station.id} station={station} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
