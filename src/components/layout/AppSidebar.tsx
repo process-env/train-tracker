@@ -77,7 +77,7 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        {/* Navigation + Route Filters */}
+        {/* Navigation - always visible */}
         <SidebarGroup>
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarMenu>
@@ -109,7 +109,11 @@ export function AppSidebar() {
               );
             })}
           </SidebarMenu>
-          <SidebarGroupLabel className="mt-4">Filter Routes</SidebarGroupLabel>
+        </SidebarGroup>
+
+        {/* Route Filters - separate group */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Filter Routes</SidebarGroupLabel>
           <SidebarGroupContent>
             <RouteFilter compact={isCollapsed} />
           </SidebarGroupContent>
