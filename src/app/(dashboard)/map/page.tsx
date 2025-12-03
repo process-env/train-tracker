@@ -22,7 +22,7 @@ const SubwayMap = dynamic(
 
 export default function MapPage() {
   return (
-    <div className="h-full">
+    <div className="h-full w-full overflow-hidden">
       <ErrorBoundary fallback={<MapErrorFallback onRetry={() => window.location.reload()} />}>
         <SubwayMap />
       </ErrorBoundary>

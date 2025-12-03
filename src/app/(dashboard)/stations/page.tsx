@@ -28,7 +28,7 @@ export default function StationsPage() {
   }, [stations, search]);
 
   return (
-    <div className="p-6 space-y-6 overflow-y-auto h-full">
+    <div className="p-6 space-y-6 overflow-y-auto overflow-x-hidden h-full w-full">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold">Stations</h1>

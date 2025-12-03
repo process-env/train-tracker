@@ -28,7 +28,7 @@ export default async function DashboardLayout({
             <Separator orientation="vertical" className="mr-2 h-4" />
             <AlertBanner />
           </header>
-          <main className="flex-1 overflow-auto">
+          <main className="flex-1 overflow-x-hidden overflow-y-auto">
             <ErrorBoundary>{children}</ErrorBoundary>
           </main>
         </SidebarInset>
