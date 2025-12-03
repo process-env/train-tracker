@@ -45,7 +45,7 @@ function TickerSection({ alerts, severity }: TickerSectionProps) {
             tickerContent.map((item) => (
               <span
                 key={`${item.id}-copy${copy}`}
-                className="inline-flex items-center gap-2 px-4"
+                className="inline-flex items-center gap-2 px-4 flex-shrink-0"
               >
                 {/* Route circles */}
                 {item.routes.slice(0, ALERT_LIMITS.TICKER_ROUTES).map((route) => {

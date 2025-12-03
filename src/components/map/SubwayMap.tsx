@@ -194,7 +194,7 @@ export function SubwayMap() {
           <span>Train arriving</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-[#EE352E] border border-white" />
+          <div className="w-4 h-4 rounded legend-train-color border border-white" />
           <span>Train</span>
         </div>
       </div>

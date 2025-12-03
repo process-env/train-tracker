@@ -46,7 +46,7 @@ export function RouteFilter({ compact = false }: RouteFilterProps) {
   if (compact) {
     // Compact vertical view with arrow navigation, max 60% viewport height
     return (
-      <div className="flex flex-col items-center">
+      <div className="flex flex-col items-center px-2">
         {canScrollUp && (
           <button
             onClick={scrollUp}
@@ -58,7 +58,7 @@ export function RouteFilter({ compact = false }: RouteFilterProps) {
         <div
           ref={scrollRef}
           onScroll={checkScroll}
-          className="flex flex-col gap-1 items-center py-1 max-h-[60vh] overflow-hidden"
+          className="flex flex-col gap-1.5 items-center py-1 px-1 max-h-[60vh] overflow-y-auto scrollbar-none"
         >
           {ALL_ROUTES.map((routeId) => {
             const color = getRouteColor(routeId);
@@ -70,9 +70,9 @@ export function RouteFilter({ compact = false }: RouteFilterProps) {
                 key={routeId}
                 onClick={() => toggleRouteFilter(routeId)}
                 className={cn(
-                  'w-6 h-6 rounded-full text-[10px] font-bold flex items-center justify-center transition-all shrink-0',
+                  'w-7 h-7 rounded-full text-[11px] font-bold flex items-center justify-center transition-all shrink-0',
                   isSelected
-                    ? 'ring-2 ring-offset-1 ring-offset-background ring-primary'
+                    ? 'ring-2 ring-offset-2 ring-offset-background ring-primary scale-110'
                     : 'opacity-50 hover:opacity-100'
                 )}
                 style={{
@@ -87,7 +87,7 @@ export function RouteFilter({ compact = false }: RouteFilterProps) {
           {selectedRouteIds.length > 0 && (
             <button
               onClick={clearRouteFilters}
-              className="w-6 h-6 rounded-full text-[10px] bg-muted hover:bg-muted/80 flex items-center justify-center mt-1 shrink-0"
+              className="w-7 h-7 rounded-full text-[11px] bg-muted hover:bg-muted/80 flex items-center justify-center mt-1 shrink-0"
               title="Clear filters"
             >
               ×

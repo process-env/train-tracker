@@ -121,6 +121,15 @@
   }
 }
 
+/* Hide scrollbar utility */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 /* MapLibre GL overrides */
 .maplibregl-map {
   width: 100% !important;
@@ -153,13 +162,13 @@
   color: #aaa !important;
 }
 
-/* Alert ticker animation */
+/* Alert ticker animation - GPU accelerated for smooth scrolling */
 @keyframes ticker-scroll {
   0% {
-    transform: translateX(0);
+    transform: translate3d(0, 0, 0);
   }
   100% {
-    transform: translateX(-50%);
+    transform: translate3d(-50%, 0, 0);
   }
 }
 
@@ -172,12 +181,30 @@
 .ticker-content {
   display: flex;
   white-space: nowrap;
+  will-change: transform;
+  backface-visibility: hidden;
   /* Duration is set via inline style for dynamic calculation */
   animation: ticker-scroll var(--ticker-duration, 30s) linear infinite;
 }
 
 .ticker-content:hover {
   animation-play-state: paused;
+}
+
+/* Legend train color cycling animation */
+@keyframes legend-color-cycle {
+  0%, 100% { background-color: #EE352E; } /* Red - 1,2,3 */
+  12.5% { background-color: #00933C; }    /* Green - 4,5,6 */
+  25% { background-color: #B933AD; }      /* Purple - 7 */
+  37.5% { background-color: #2850AD; }    /* Blue - A,C,E */
+  50% { background-color: #FF6319; }      /* Orange - B,D,F,M */
+  62.5% { background-color: #6CBE45; }    /* Lime - G */
+  75% { background-color: #996633; }      /* Brown - J,Z */
+  87.5% { background-color: #FCCC0A; }    /* Yellow - N,Q,R,W */
+}
+
+.legend-train-color {
+  animation: legend-color-cycle 16s ease-in-out infinite;
 }
 
 /* Ticker loading skeleton */
