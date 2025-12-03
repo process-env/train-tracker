@@ -232,7 +232,7 @@ export default function AnalyticsPage() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">
-                Delay Distribution (Last Hour)
+                Delay Distribution
               </CardTitle>
             </CardHeader>
             <CardContent>

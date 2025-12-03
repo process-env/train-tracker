@@ -76,13 +76,13 @@ export function HistoricalDataCard({ stats }: HistoricalDataCardProps) {
             )}
 
             <p className="text-xs text-muted-foreground">
-              Auto-collecting daily at 12:00 AM
+              Auto-collecting every 5 minutes
             </p>
           </div>
         ) : (
           <div className="text-center py-4 text-muted-foreground">
             <p className="text-sm">No data collected yet</p>
-            <p className="text-xs mt-1">Data collection runs daily at 12:00 AM</p>
+            <p className="text-xs mt-1">Data collection runs every 5 minutes</p>
           </div>
         )}
       </CardContent>

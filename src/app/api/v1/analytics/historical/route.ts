@@ -59,16 +59,13 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => a.time.localeCompare(b.time));
 
-    // Get route-level breakdown for last hour
-    const lastHour = new Date();
-    lastHour.setHours(lastHour.getHours() - 1);
-
+    // Get route-level breakdown for the query period
     type RouteBreakdownItem = { routeId: string; _count: { tripId: number } };
     let routeBreakdown: RouteBreakdownItem[] = [];
     try {
       routeBreakdown = await db.trainSnapshot.groupBy({
         by: ['routeId'],
-        where: { createdAt: { gte: lastHour } },
+        where: { createdAt: { gte: since } },
         _count: { tripId: true },
         orderBy: { _count: { tripId: 'desc' } },
       }) as RouteBreakdownItem[];
@@ -76,12 +73,14 @@ export async function GET(request: NextRequest) {
       routeBreakdown = [];
     }
 
-    // Get arrivals for delay calculation
+    // Get arrivals for delay calculation (include routeId for 3-tier fallback)
+    // Use `since` (hours param) not hardcoded lastHour - data may be older
     const arrivals = await db.arrivalEvent.findMany({
-      where: { recordedAt: { gte: lastHour } },
+      where: { recordedAt: { gte: since } },
       select: {
         tripId: true,
         stationId: true,
+        routeId: true, // Needed for 3-tier fallback lookup
         predictedArrival: true,
         delaySeconds: true, // May already be calculated
       },
@@ -99,11 +98,12 @@ export async function GET(request: NextRequest) {
       delayValues.push(arr.delaySeconds!);
     }
 
-    // Calculate delays for those without (compare to GTFS schedule)
+    // Calculate delays for those without (compare to GTFS schedule using 3-tier fallback)
     if (needsCalculation.length > 0) {
       const batchInput = needsCalculation.map((arr) => ({
         tripId: arr.tripId,
         stationId: arr.stationId,
+        routeId: arr.routeId, // Pass routeId for shape/direction fallback
         predictedArrival: new Date(arr.predictedArrival),
       }));
 
@@ -146,16 +146,15 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
-    // Count unique trips for more accurate ridership estimation
-    const uniqueTripsResult = await db.trainSnapshot.findMany({
-      where: { createdAt: { gte: since } },
+    // === All-Time Impact Metrics ===
+    // Calculate impact based on ALL collected data
+    const allTimeUniqueTrips = await db.trainSnapshot.findMany({
       distinct: ['tripId'],
       select: { tripId: true },
     }).catch(() => []);
-    const uniqueTrips = uniqueTripsResult.length;
 
-    // Calculate impact metrics using total snapshots and unique trips
-    const economicImpact = calculateEconomicImpact(totalSnapshots, uniqueTrips);
+    // Calculate impact metrics using all-time data
+    const economicImpact = calculateEconomicImpact(totalSnapshots, allTimeUniqueTrips.length);
     const environmentalImpact = calculateEnvironmentalImpact(economicImpact.estimatedRiders);
 
     return NextResponse.json({
@@ -172,12 +171,12 @@ export async function GET(request: NextRequest) {
       impactMetrics: {
         economic: economicImpact,
         environmental: environmentalImpact,
+        period: 'all-time',
       },
       collectionStats: {
         totalSnapshots,
         totalArrivals,
         totalAlerts,
-        uniqueTrips,
         lastCollection: lastCollection?.createdAt?.toISOString() || null,
         lastStatus: lastCollection?.status || null,
         dataRange: oldest && newest
