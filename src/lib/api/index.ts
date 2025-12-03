@@ -15,7 +15,7 @@ export const mtaApi = {
     return res.json();
   },
 
-  getEnrichedStations: async (): Promise<Record<string, { enrichedName: string }>> => {
+  getEnrichedStations: async (): Promise<Record<string, { enrichedName: string; crossStreet?: string }>> => {
     const res = await fetch('/data/stations-enriched.json');
     if (!res.ok) return {};
     return res.json();

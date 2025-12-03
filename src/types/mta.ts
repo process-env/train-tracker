@@ -18,6 +18,7 @@ export interface Stop {
   routes: string | null;
   parent: string | null;
   enrichedName?: string; // Cross-street enriched name from TomTom API
+  crossStreet?: string; // Direct cross street name
 }
 
 // Alias for Station (same as Stop)

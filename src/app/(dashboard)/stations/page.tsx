@@ -5,12 +5,40 @@ import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StationCard } from '@/components/stations';
-import { useStaticData } from '@/hooks';
+import { useStaticData, useTrainPositions, useAlerts } from '@/hooks';
 import { isParentStation } from '@/lib/mta/station-utils';
 
 export default function StationsPage() {
   const [search, setSearch] = useState('');
   const { stations, isLoading } = useStaticData();
+  const { trains } = useTrainPositions({ refreshInterval: 15000 });
+  const { alerts } = useAlerts();
+
+  // Build lookup maps for derived data
+  const stationData = useMemo(() => {
+    // Count trains approaching each station (by nextStopId)
+    const trainsPerStation: Record<string, number> = {};
+    for (const train of trains) {
+      // nextStopId might be child stop, need to map to parent
+      const stopId = train.nextStopId;
+      // Try both the stop ID and its parent (remove N/S suffix)
+      const parentId = stopId?.replace(/[NS]$/, '');
+      if (parentId) {
+        trainsPerStation[parentId] = (trainsPerStation[parentId] || 0) + 1;
+      }
+    }
+
+    // Build set of stations with alerts
+    const stationsWithAlerts = new Set<string>();
+    for (const alert of alerts) {
+      for (const stopId of alert.affectedStops) {
+        const parentId = stopId?.replace(/[NS]$/, '');
+        if (parentId) stationsWithAlerts.add(parentId);
+      }
+    }
+
+    return { trainsPerStation, stationsWithAlerts };
+  }, [trains, alerts]);
 
   // Filter to parent stations only and apply search
   const filteredStations = useMemo(() => {
@@ -72,7 +100,12 @@ export default function StationsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
           {filteredStations.map((station) => (
-            <StationCard key={station.id} station={station} />
+            <StationCard
+              key={station.id}
+              station={station}
+              trainsApproaching={stationData.trainsPerStation[station.id] || 0}
+              hasAlerts={stationData.stationsWithAlerts.has(station.id)}
+            />
           ))}
         </div>
       )}

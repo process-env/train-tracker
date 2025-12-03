@@ -54,6 +54,7 @@ export function useStaticData(): StaticData {
       stationsDict[stop.id] = {
         ...stop,
         enrichedName: enrichment?.enrichedName,
+        crossStreet: enrichment?.crossStreet,
       };
       if (!stop.parent && /^\d+$/.test(stop.id)) {
         parentIds.push(stop.id);
