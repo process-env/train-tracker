@@ -111,13 +111,15 @@ export function AppSidebar() {
           </SidebarMenu>
         </SidebarGroup>
 
-        {/* Route Filters - separate group */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Filter Routes</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <RouteFilter compact={isCollapsed} />
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {/* Route Filters - only show on map page */}
+        {pathname === '/map' && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Filter Routes</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <RouteFilter compact={isCollapsed} />
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter>

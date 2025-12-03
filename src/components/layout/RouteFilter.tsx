@@ -46,7 +46,7 @@ export function RouteFilter({ compact = false }: RouteFilterProps) {
   if (compact) {
     // Compact vertical view with arrow navigation, max 60% viewport height
     return (
-      <div className="flex flex-col items-center px-2">
+      <div className="flex flex-col items-center px-3">
         {canScrollUp && (
           <button
             onClick={scrollUp}
@@ -70,10 +70,10 @@ export function RouteFilter({ compact = false }: RouteFilterProps) {
                 key={routeId}
                 onClick={() => toggleRouteFilter(routeId)}
                 className={cn(
-                  'w-7 h-7 rounded-full text-[11px] font-bold flex items-center justify-center transition-all shrink-0',
+                  'w-7 h-7 rounded-full text-[11px] font-bold flex items-center justify-center transition-all shrink-0 border-2',
                   isSelected
-                    ? 'ring-2 ring-offset-2 ring-offset-background ring-primary scale-110'
-                    : 'opacity-50 hover:opacity-100'
+                    ? 'border-white scale-110 shadow-lg'
+                    : 'border-transparent opacity-50 hover:opacity-100'
                 )}
                 style={{
                   backgroundColor: color,
