@@ -15,38 +15,43 @@ interface StationCardProps {
 }
 
 // Get the best location name for display
-function getLocationName(station: Station): string | null {
+function getLocationName(station: Station): string {
   const { crossStreet, name: originalName } = station;
 
-  if (!crossStreet) return null;
+  // If we have cross street data, use it
+  if (crossStreet) {
+    // Take only the first cross street (before any comma)
+    const firstCrossStreet = crossStreet.split(',')[0].trim();
 
-  // Take only the first cross street (before any comma)
-  const firstCrossStreet = crossStreet.split(',')[0].trim();
-
-  // Skip if it's just repeating the street name (e.g., "West 237th Street" for "238 St")
-  if (firstCrossStreet.toLowerCase().includes('street') &&
-      firstCrossStreet.match(/\d+/) &&
-      originalName.match(/\d+/)) {
-    const enrichedNum = firstCrossStreet.match(/\d+/)?.[0];
-    const originalNum = originalName.match(/\d+/)?.[0];
-    if (enrichedNum && originalNum && Math.abs(parseInt(enrichedNum) - parseInt(originalNum)) <= 2) {
-      // Try second cross street if available
-      const parts = crossStreet.split(',');
-      if (parts.length > 1) {
-        return parts[1].trim();
+    // Skip if it's just repeating the street name (e.g., "West 237th Street" for "238 St")
+    if (firstCrossStreet.toLowerCase().includes('street') &&
+        firstCrossStreet.match(/\d+/) &&
+        originalName.match(/\d+/)) {
+      const enrichedNum = firstCrossStreet.match(/\d+/)?.[0];
+      const originalNum = originalName.match(/\d+/)?.[0];
+      if (enrichedNum && originalNum && Math.abs(parseInt(enrichedNum) - parseInt(originalNum)) <= 2) {
+        // Try second cross street if available
+        const parts = crossStreet.split(',');
+        if (parts.length > 1) {
+          return parts[1].trim();
+        }
+        // Fall through to use station name
+      } else {
+        return firstCrossStreet;
       }
-      return null;
+    } else {
+      return firstCrossStreet;
     }
   }
 
-  return firstCrossStreet;
+  // Fallback: use station name as the location (not lat/long)
+  return originalName;
 }
 
 export function StationCard({ station, trainsApproaching = 0, hasAlerts = false }: StationCardProps) {
   const router = useRouter();
   const routes = station.routes?.split(/[,\s]+/).filter(Boolean) || [];
-  const crossStreet = getLocationName(station);
-  const locationName = crossStreet || `${station.lat.toFixed(4)}, ${station.lon.toFixed(4)}`;
+  const locationName = getLocationName(station);
 
   const handleMapClick = (e: React.MouseEvent) => {
     e.preventDefault();

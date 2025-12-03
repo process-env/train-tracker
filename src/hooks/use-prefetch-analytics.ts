@@ -19,12 +19,12 @@ export function usePrefetchAnalytics() {
       });
     });
 
-    // Prefetch historical data
-    queryClient.prefetchQuery({
-      queryKey: queryKeys.historical(24),
-      queryFn: () => mtaApi.getHistoricalData(24),
-      staleTime: 5 * 60 * 1000,
-    });
+    // Historical data prefetch DISABLED - causes 49s+ load times
+    // queryClient.prefetchQuery({
+    //   queryKey: queryKeys.historical(24),
+    //   queryFn: () => mtaApi.getHistoricalData(24),
+    //   staleTime: 5 * 60 * 1000,
+    // });
   }, [queryClient]);
 
   return prefetch;

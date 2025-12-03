@@ -11,23 +11,17 @@ import {
   FeedStatusCard,
   StatsCard,
   AlertStatusCard,
-  HistoricalDataCard,
-  TrainHistoryChart,
-  DelayDistributionChart,
   ScheduleFrequencyCard,
   BusiestStationsCard,
   RouteProfileCard,
   ServiceSpanCard,
-  EconomicImpactCard,
-  EnvironmentalImpactCard,
 } from '@/components/analytics';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useScheduleAnalytics } from '@/hooks/use-schedule-analytics';
 
 export default function AnalyticsPage() {
   // Real-time data from useAnalytics hook
-  const { data, historicalData, historicalLoading, loading, error, refresh } =
-    useAnalytics();
+  const { data, loading, error, refresh } = useAnalytics();
 
   // Schedule data from GTFS static
   const {
@@ -214,76 +208,6 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Historical Data Section */}
-      <div className="border-t pt-6">
-        <h2 className="text-xl font-semibold mb-4">Historical Data</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Collection Stats */}
-          {historicalLoading ? (
-            <Skeleton className="h-[200px]" />
-          ) : (
-            <HistoricalDataCard
-              stats={historicalData?.collectionStats || null}
-            />
-          )}
-
-          {/* Delay Distribution */}
-          <Card className="min-h-[200px]">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">
-                Delay Distribution
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {historicalLoading ? (
-                <Skeleton className="h-[150px]" />
-              ) : (
-                <DelayDistributionChart
-                  data={historicalData?.delayDistribution || []}
-                  compact
-                />
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Train History Chart */}
-          <Card className="min-h-[200px]">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">
-                Train Activity (Last 24 Hours)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {historicalLoading ? (
-                <Skeleton className="h-[150px]" />
-              ) : (
-                <TrainHistoryChart
-                  data={historicalData?.trainHistory || []}
-                  compact
-                />
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Impact Metrics Section */}
-        <div className="mt-6">
-          <h3 className="text-lg font-semibold mb-4 text-muted-foreground">
-            System Impact (Based on Collected Data)
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <EconomicImpactCard
-              impact={historicalData?.impactMetrics?.economic || null}
-              loading={historicalLoading}
-            />
-            <EnvironmentalImpactCard
-              impact={historicalData?.impactMetrics?.environmental || null}
-              loading={historicalLoading}
-            />
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

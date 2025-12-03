@@ -41,6 +41,19 @@ function setCachedResponse(key: string, data: Record<string, unknown>): void {
 }
 
 export async function GET(request: NextRequest) {
+  // DISABLED - This endpoint takes 49+ seconds due to schedule lookup
+  // Return empty data immediately
+  return NextResponse.json({
+    trainHistory: [],
+    routeBreakdown: [],
+    delayDistribution: [],
+    delayStats: null,
+    impactMetrics: null,
+    collectionStats: { totalSnapshots: 0, totalArrivals: 0, totalAlerts: 0 },
+    timestamp: new Date().toISOString(),
+    disabled: true,
+  });
+
   try {
     const searchParams = request.nextUrl.searchParams;
 
