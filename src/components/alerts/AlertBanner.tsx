@@ -1,6 +1,5 @@
 'use client';
 
-import { useAlertsStore } from '@/stores';
 import { useAlerts } from '@/hooks';
 import { cn } from '@/lib/utils';
 import {
@@ -80,16 +79,12 @@ function TickerSection({ alerts, severity }: TickerSectionProps) {
 
 function TickerSkeleton({ severity }: { severity: AlertSeverity }) {
   const colors = SEVERITY_COLORS[severity];
-  return (
-    <div className={cn('ticker-skeleton', colors.bg)} />
-  );
+  return <div className={cn('ticker-skeleton', colors.bg)} />;
 }
 
 export function AlertBanner({ className }: AlertBannerProps) {
-  const { getVisibleAlerts } = useAlertsStore();
-  const { isLoading } = useAlerts({ enabled: true });
-
-  const visibleAlerts = getVisibleAlerts();
+  // Use the new hook interface - visibleAlerts comes directly from the hook
+  const { visibleAlerts, isLoading } = useAlerts({ enabled: true });
 
   const criticalAlerts = visibleAlerts.filter((a) => a.severity === 'critical');
   const warningAlerts = visibleAlerts.filter((a) => a.severity === 'warning');

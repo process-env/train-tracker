@@ -4,16 +4,13 @@ import Link from 'next/link';
 import { AlertTriangle, AlertCircle, Info, ExternalLink } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useAlertsStore } from '@/stores';
 import { useAlerts } from '@/hooks/use-alerts';
 
 export function AlertStatusCard() {
-  useAlerts();
-  const { getAlertCounts, getActiveAlerts } = useAlertsStore();
+  const { alerts: activeAlerts, counts } = useAlerts();
 
-  const counts = getAlertCounts();
   const total = counts.critical + counts.warning + counts.info;
-  const recentAlerts = getActiveAlerts().slice(0, 3);
+  const recentAlerts = activeAlerts.slice(0, 3);
 
   return (
     <Card>
@@ -55,7 +52,9 @@ export function AlertStatusCard() {
         {/* Recent Alerts */}
         {total > 0 ? (
           <div className="space-y-2 border-t pt-3">
-            <p className="text-xs font-medium text-muted-foreground">Recent Alerts</p>
+            <p className="text-xs font-medium text-muted-foreground">
+              Recent Alerts
+            </p>
             {recentAlerts.map((alert) => (
               <div
                 key={alert.id}

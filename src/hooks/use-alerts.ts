@@ -1,124 +1,82 @@
 'use client';
 
-import { useEffect, useCallback, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { useAlertsStore } from '@/stores';
+import { mtaApi } from '@/lib/api';
+import { queryKeys } from '@/lib/api/query-keys';
 import type { ServiceAlert } from '@/types/mta';
 
 interface UseAlertsOptions {
-  /** Refresh interval in milliseconds (default: 60000 = 1 minute) */
   refreshInterval?: number;
-  /** Whether to fetch alerts (default: true) */
   enabled?: boolean;
-  /** Filter by route IDs */
   routeIds?: string[];
 }
 
 interface UseAlertsReturn {
   alerts: ServiceAlert[];
+  visibleAlerts: ServiceAlert[];
   isLoading: boolean;
   error: string | null;
-  refetch: () => Promise<void>;
+  refetch: () => Promise<unknown>;
   counts: { critical: number; warning: number; info: number };
+  dismissAlert: (id: string) => void;
+  clearDismissed: () => void;
 }
 
 export function useAlerts(options: UseAlertsOptions = {}): UseAlertsReturn {
   const { refreshInterval = 60000, enabled = true, routeIds } = options;
+  const { dismissedIds, dismissAlert, clearDismissed } = useAlertsStore();
 
-  const {
-    alerts,
-    isLoading,
-    error,
-    setAlerts,
-    setLoading,
-    setError,
-    getActiveAlerts,
-    getAlertCounts,
-  } = useAlertsStore();
+  const query = useQuery({
+    queryKey: queryKeys.alerts(routeIds),
+    queryFn: () => mtaApi.getAlerts(routeIds),
+    enabled,
+    refetchInterval: enabled ? refreshInterval : false,
+    staleTime: refreshInterval / 2,
+    refetchIntervalInBackground: false, // Pause when page hidden
+  });
 
-  // Use ref for stable route filter
-  const routeIdsRef = useRef(routeIds);
-  routeIdsRef.current = routeIds;
+  const alerts: ServiceAlert[] = query.data?.alerts || [];
 
-  const fetchAlerts = useCallback(async () => {
-    if (!enabled) return;
+  // Compute active alerts (within active period)
+  const activeAlerts = useMemo(() => {
+    const now = new Date();
+    return alerts.filter((alert) => {
+      if (!alert.activePeriods.length) return true;
+      return alert.activePeriods.some((period) => {
+        const start = new Date(period.start);
+        const end = period.end ? new Date(period.end) : null;
+        if (now < start) return false;
+        if (end && now > end) return false;
+        return true;
+      });
+    });
+  }, [alerts]);
 
-    setLoading(true);
+  // Compute visible alerts (not dismissed)
+  const visibleAlerts = useMemo(() => {
+    return activeAlerts.filter((alert) => !dismissedIds.has(alert.id));
+  }, [activeAlerts, dismissedIds]);
 
-    try {
-      // Build URL with optional route filter
-      let url = '/api/v1/alerts';
-      if (routeIdsRef.current?.length) {
-        url += `?route=${routeIdsRef.current.join(',')}`;
-      }
-
-      const response = await fetch(url);
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch alerts: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      setAlerts(data.alerts || []);
-    } catch (err) {
-      console.error('Error fetching alerts:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch alerts');
-    } finally {
-      setLoading(false);
-    }
-  }, [enabled, setAlerts, setLoading, setError]);
-
-  // Initial fetch
-  useEffect(() => {
-    if (enabled) {
-      fetchAlerts();
-    }
-  }, [enabled, fetchAlerts]);
-
-  // Polling - pause when page is hidden
-  useEffect(() => {
-    if (!enabled || refreshInterval <= 0) return;
-
-    let intervalId: NodeJS.Timeout | null = null;
-
-    const startPolling = () => {
-      if (intervalId) clearInterval(intervalId);
-      intervalId = setInterval(fetchAlerts, refreshInterval);
-    };
-
-    const stopPolling = () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-        intervalId = null;
-      }
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        stopPolling();
-      } else {
-        // Fetch immediately when becoming visible, then resume polling
-        fetchAlerts();
-        startPolling();
-      }
-    };
-
-    // Start polling
-    startPolling();
-
-    // Listen for visibility changes
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      stopPolling();
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [fetchAlerts, refreshInterval, enabled]);
+  // Compute counts
+  const counts = useMemo(
+    () => ({
+      critical: activeAlerts.filter((a) => a.severity === 'critical').length,
+      warning: activeAlerts.filter((a) => a.severity === 'warning').length,
+      info: activeAlerts.filter((a) => a.severity === 'info').length,
+    }),
+    [activeAlerts]
+  );
 
   return {
-    alerts: getActiveAlerts(),
-    isLoading,
-    error,
-    refetch: fetchAlerts,
-    counts: getAlertCounts(),
+    alerts: activeAlerts,
+    visibleAlerts,
+    isLoading: query.isLoading,
+    error: query.error?.message || null,
+    refetch: query.refetch,
+    counts,
+    dismissAlert,
+    clearDismissed,
   };
 }

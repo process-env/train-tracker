@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { mtaApi } from '@/lib/api';
+import { queryKeys } from '@/lib/api/query-keys';
 import type { ArrivalBoard } from '@/types/mta';
-import { useTrainsStore } from '@/stores';
 
 interface UseArrivalsOptions {
   refreshInterval?: number;
@@ -16,51 +17,18 @@ export function useArrivals(
 ) {
   const { refreshInterval = 30000, enabled = true } = options;
 
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const { arrivalsByStation, updateArrivals } = useTrainsStore();
-  const arrivals = arrivalsByStation[stopId];
-
-  const fetchArrivals = useCallback(async () => {
-    if (!enabled || !groupId || !stopId) return;
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`/api/v1/arrivals/${groupId}/${stopId}`);
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch arrivals');
-      }
-
-      const data: ArrivalBoard = await response.json();
-      updateArrivals(stopId, data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [groupId, stopId, enabled, updateArrivals]);
-
-  // Initial fetch
-  useEffect(() => {
-    fetchArrivals();
-  }, [fetchArrivals]);
-
-  // Set up polling
-  useEffect(() => {
-    if (!enabled || refreshInterval <= 0) return;
-
-    const interval = setInterval(fetchArrivals, refreshInterval);
-    return () => clearInterval(interval);
-  }, [fetchArrivals, refreshInterval, enabled]);
+  const query = useQuery({
+    queryKey: queryKeys.arrivals(groupId, stopId),
+    queryFn: () => mtaApi.getArrivals(groupId, stopId),
+    enabled: enabled && !!groupId && !!stopId,
+    refetchInterval: enabled ? refreshInterval : false,
+    staleTime: refreshInterval / 2,
+  });
 
   return {
-    arrivals,
-    isLoading,
-    error,
-    refetch: fetchArrivals,
+    arrivals: query.data as ArrivalBoard | undefined,
+    isLoading: query.isLoading,
+    error: query.error?.message || null,
+    refetch: query.refetch,
   };
 }

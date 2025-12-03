@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrivalBoard } from '@/components/stations';
-import { useStationsStore, useUIStore } from '@/stores';
+import { useStaticData } from '@/hooks';
+import { useUIStore } from '@/stores';
 import { getRouteColor } from '@/lib/constants';
 import type { ArrivalItem } from '@/types/mta';
 
@@ -18,7 +19,7 @@ export default function StationDetailPage() {
   const router = useRouter();
   const stationId = params.stationId as string;
 
-  const { stations, loadStaticData, isLoading: stationsLoading } = useStationsStore();
+  const { stations, isLoading: stationsLoading } = useStaticData();
   const { setSelectedStation } = useUIStore();
 
   const [arrivals, setArrivals] = useState<ArrivalItem[]>([]);
@@ -27,11 +28,6 @@ export default function StationDetailPage() {
 
   const station = stations[stationId];
   const routes = station?.routes?.split(/[,\s]+/).filter(Boolean) || [];
-
-  // Load station data
-  useEffect(() => {
-    loadStaticData();
-  }, [loadStaticData]);
 
   // Fetch arrivals for this station using optimized single endpoint
   const fetchArrivals = useCallback(async () => {
@@ -102,7 +98,9 @@ export default function StationDetailPage() {
               Back to stations
             </Link>
           </Button>
-          <h1 className="text-2xl font-bold">{station.enrichedName || station.name}</h1>
+          <h1 className="text-2xl font-bold">
+            {station.enrichedName || station.name}
+          </h1>
           <div className="flex items-center gap-2 text-muted-foreground">
             <MapPin className="h-4 w-4" />
             <span>
@@ -142,7 +140,9 @@ export default function StationDetailPage() {
             onClick={fetchArrivals}
             disabled={arrivalsLoading}
           >
-            <RefreshCw className={`h-4 w-4 ${arrivalsLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`h-4 w-4 ${arrivalsLoading ? 'animate-spin' : ''}`}
+            />
           </Button>
         </CardHeader>
         <CardContent>

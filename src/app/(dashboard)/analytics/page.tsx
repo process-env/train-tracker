@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
 import { Train, MapPin, Clock, Activity, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,47 +15,11 @@ import {
   DelayDistributionChart,
 } from '@/components/analytics';
 import { useAnalytics } from '@/hooks/use-analytics';
-import { useTrainPositions } from '@/hooks';
-
-interface HistoricalData {
-  trainHistory: Array<{ time: string; trainCount: number; routeCount: number }>;
-  delayDistribution: Array<{ bucket: string; count: number }>;
-  collectionStats: {
-    totalSnapshots: number;
-    totalArrivals: number;
-    totalAlerts: number;
-    lastCollection: string | null;
-    lastStatus: string | null;
-    dataRange: { from: string; to: string; hours: number } | null;
-  } | null;
-}
 
 export default function AnalyticsPage() {
-  // Start fetching train positions
-  useTrainPositions();
-
-  const { data, loading, error, refresh } = useAnalytics();
-
-  // Historical data state
-  const [historicalData, setHistoricalData] = useState<HistoricalData | null>(null);
-
-  // Fetch historical data
-  const fetchHistoricalData = useCallback(async () => {
-    try {
-      const res = await fetch('/api/v1/analytics/historical?hours=24');
-      if (res.ok) {
-        const data = await res.json();
-        setHistoricalData(data);
-      }
-    } catch (err) {
-      console.error('Failed to fetch historical data:', err);
-    }
-  }, []);
-
-  // Load historical data on mount
-  useEffect(() => {
-    fetchHistoricalData();
-  }, [fetchHistoricalData]);
+  // All data now comes from useAnalytics hook (trains, feeds, historical - all parallel)
+  const { data, historicalData, historicalLoading, loading, error, refresh } =
+    useAnalytics();
 
   if (error) {
     return (
@@ -174,25 +137,49 @@ export default function AnalyticsPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Collection Stats */}
-          <HistoricalDataCard stats={historicalData?.collectionStats || null} />
+          {historicalLoading ? (
+            <Skeleton className="h-[200px]" />
+          ) : (
+            <HistoricalDataCard
+              stats={historicalData?.collectionStats || null}
+            />
+          )}
 
           {/* Delay Distribution */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Delay Distribution (Last Hour)</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Delay Distribution (Last Hour)
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <DelayDistributionChart data={historicalData?.delayDistribution || []} compact />
+              {historicalLoading ? (
+                <Skeleton className="h-[150px]" />
+              ) : (
+                <DelayDistributionChart
+                  data={historicalData?.delayDistribution || []}
+                  compact
+                />
+              )}
             </CardContent>
           </Card>
 
           {/* Train History Chart */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Train Activity (Last 24 Hours)</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Train Activity (Last 24 Hours)
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <TrainHistoryChart data={historicalData?.trainHistory || []} compact />
+              {historicalLoading ? (
+                <Skeleton className="h-[150px]" />
+              ) : (
+                <TrainHistoryChart
+                  data={historicalData?.trainHistory || []}
+                  compact
+                />
+              )}
             </CardContent>
           </Card>
         </div>

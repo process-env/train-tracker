@@ -1,20 +1,16 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StationCard } from '@/components/stations';
-import { useStationsStore } from '@/stores';
+import { useStaticData } from '@/hooks';
 import { isParentStation } from '@/lib/mta/station-utils';
 
 export default function StationsPage() {
   const [search, setSearch] = useState('');
-  const { stations, loadStaticData, isLoading } = useStationsStore();
-
-  useEffect(() => {
-    loadStaticData();
-  }, [loadStaticData]);
+  const { stations, isLoading } = useStaticData();
 
   // Filter to parent stations only and apply search
   const filteredStations = useMemo(() => {
@@ -37,7 +33,9 @@ export default function StationsPage() {
       <div>
         <h1 className="text-2xl font-bold">Stations</h1>
         <p className="text-muted-foreground">
-          Browse all {Object.keys(stations).length > 0 ? filteredStations.length : '—'} NYC subway stations
+          Browse all{' '}
+          {Object.keys(stations).length > 0 ? filteredStations.length : '—'} NYC
+          subway stations
         </p>
       </div>
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { useAlertsStore } from '@/stores';
+import { useAlerts } from '@/hooks/use-alerts';
 import { SEVERITY_COLORS } from '@/lib/constants';
 
 interface AlertBadgeProps {
@@ -10,15 +10,15 @@ interface AlertBadgeProps {
 }
 
 export function AlertBadge({ className, showZero = false }: AlertBadgeProps) {
-  const { getAlertCounts } = useAlertsStore();
+  const { counts } = useAlerts();
 
-  const counts = getAlertCounts();
   const totalCount = counts.critical + counts.warning + counts.info;
 
   if (totalCount === 0 && !showZero) return null;
 
   // Determine color based on highest severity present
-  const severity = counts.critical > 0 ? 'critical' : counts.warning > 0 ? 'warning' : 'info';
+  const severity =
+    counts.critical > 0 ? 'critical' : counts.warning > 0 ? 'warning' : 'info';
   const colors = SEVERITY_COLORS[severity];
 
   return (

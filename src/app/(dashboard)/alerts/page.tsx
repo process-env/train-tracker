@@ -7,7 +7,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertList } from '@/components/alerts';
 import { useAlerts } from '@/hooks/use-alerts';
-import { useAlertsStore } from '@/stores';
 import { SEVERITY_COLORS } from '@/lib/constants';
 import type { ServiceAlert } from '@/types/mta';
 
@@ -18,29 +17,31 @@ function groupAlertsBySeverity(alerts: ServiceAlert[]) {
       acc[alert.severity].push(alert);
       return acc;
     },
-    { critical: [] as ServiceAlert[], warning: [] as ServiceAlert[], info: [] as ServiceAlert[] }
+    {
+      critical: [] as ServiceAlert[],
+      warning: [] as ServiceAlert[],
+      info: [] as ServiceAlert[],
+    }
   );
 }
 
 export default function AlertsPage() {
-  const { isLoading, error, refetch } = useAlerts();
-  const { getActiveAlerts, getAlertCounts } = useAlertsStore();
-
-  const activeAlerts = getActiveAlerts();
-  const counts = getAlertCounts();
+  // Use the new hook interface - alerts and counts come directly from the hook
+  const { alerts: activeAlerts, counts, isLoading, error, refetch } = useAlerts();
 
   // Single-pass grouping instead of multiple filter calls
-  const { critical: criticalAlerts, warning: warningAlerts, info: infoAlerts } = useMemo(
-    () => groupAlertsBySeverity(activeAlerts),
-    [activeAlerts]
-  );
+  const {
+    critical: criticalAlerts,
+    warning: warningAlerts,
+    info: infoAlerts,
+  } = useMemo(() => groupAlertsBySeverity(activeAlerts), [activeAlerts]);
 
   if (error) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center space-y-4">
           <p className="text-destructive">Error: {error}</p>
-          <Button onClick={refetch}>Retry</Button>
+          <Button onClick={() => refetch()}>Retry</Button>
         </div>
       </div>
     );
@@ -56,8 +57,15 @@ export default function AlertsPage() {
             Active service disruptions and advisories
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={refetch} disabled={isLoading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => refetch()}
+          disabled={isLoading}
+        >
+          <RefreshCw
+            className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`}
+          />
           Refresh
         </Button>
       </div>
@@ -66,7 +74,9 @@ export default function AlertsPage() {
       <div className="grid grid-cols-3 gap-4">
         <div className="flex items-center gap-3 p-4 rounded-lg border bg-card transition-shadow hover:shadow-md">
           <div className={`p-2 rounded-full ${SEVERITY_COLORS.critical.bgLight}`}>
-            <AlertTriangle className={`h-5 w-5 ${SEVERITY_COLORS.critical.text}`} />
+            <AlertTriangle
+              className={`h-5 w-5 ${SEVERITY_COLORS.critical.text}`}
+            />
           </div>
           <div>
             <p className="text-2xl font-bold">{counts.critical}</p>
@@ -75,7 +85,9 @@ export default function AlertsPage() {
         </div>
         <div className="flex items-center gap-3 p-4 rounded-lg border bg-card transition-shadow hover:shadow-md">
           <div className={`p-2 rounded-full ${SEVERITY_COLORS.warning.bgLight}`}>
-            <AlertCircle className={`h-5 w-5 ${SEVERITY_COLORS.warning.text}`} />
+            <AlertCircle
+              className={`h-5 w-5 ${SEVERITY_COLORS.warning.text}`}
+            />
           </div>
           <div>
             <p className="text-2xl font-bold">{counts.warning}</p>
@@ -104,13 +116,17 @@ export default function AlertsPage() {
         ) : (
           <Tabs defaultValue="all" className="w-full">
             <TabsList>
-              <TabsTrigger value="all">
-                All ({activeAlerts.length})
-              </TabsTrigger>
-              <TabsTrigger value="critical" className={SEVERITY_COLORS.critical.text}>
+              <TabsTrigger value="all">All ({activeAlerts.length})</TabsTrigger>
+              <TabsTrigger
+                value="critical"
+                className={SEVERITY_COLORS.critical.text}
+              >
                 Critical ({criticalAlerts.length})
               </TabsTrigger>
-              <TabsTrigger value="warning" className={SEVERITY_COLORS.warning.text}>
+              <TabsTrigger
+                value="warning"
+                className={SEVERITY_COLORS.warning.text}
+              >
                 Warnings ({warningAlerts.length})
               </TabsTrigger>
               <TabsTrigger value="info" className={SEVERITY_COLORS.info.text}>

@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { useStationsStore, useUIStore } from '@/stores';
-import { useTrainPositions } from '@/hooks';
+import { useUIStore } from '@/stores';
+import { useTrainPositions, useStaticData } from '@/hooks';
 import { NYC_BOUNDS } from '@/lib/constants';
 import { useMapAnimation, useStationMarkers, useTrainMarkers } from './hooks';
 import { TrainDetailPanel } from './TrainDetailPanel';
@@ -12,8 +12,6 @@ import { TrainDetailPanel } from './TrainDetailPanel';
 // Map style - CARTO Dark Matter with labels
 const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
 
-// Define group IDs as a constant outside the component to prevent recreation
-const TRAIN_GROUP_IDS = ['ACE', 'BDFM', 'G', 'JZ', 'NQRW', 'L', 'SI', '1234567'];
 const REFRESH_INTERVAL = 15000; // 15 seconds
 const TRAIN_POSITION_OPTIONS = { refreshInterval: REFRESH_INTERVAL };
 
@@ -23,8 +21,8 @@ export function SubwayMap() {
   const [mapLoaded, setMapLoaded] = useState(false);
   const [currentZoom, setCurrentZoom] = useState(11);
 
-  // Store hooks
-  const { stations, loadStaticData } = useStationsStore();
+  // Static data from React Query
+  const { stations } = useStaticData();
   const {
     selectedStationId,
     setSelectedStation,
@@ -37,7 +35,7 @@ export function SubwayMap() {
   } = useUIStore();
 
   // Train positions hook
-  const { trains } = useTrainPositions(TRAIN_GROUP_IDS, TRAIN_POSITION_OPTIONS);
+  const { trains } = useTrainPositions(TRAIN_POSITION_OPTIONS);
 
   // Animation hook
   const { trainAnimsRef, lerp, scheduleAnimation } = useMapAnimation(mapLoaded, {
@@ -63,11 +61,6 @@ export function SubwayMap() {
     refreshInterval: REFRESH_INTERVAL,
     scheduleAnimation,
   });
-
-  // Load static data on mount
-  useEffect(() => {
-    loadStaticData();
-  }, [loadStaticData]);
 
   // Initialize map
   useEffect(() => {
