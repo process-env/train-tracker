@@ -18,6 +18,8 @@ import {
   BusiestStationsCard,
   RouteProfileCard,
   ServiceSpanCard,
+  EconomicImpactCard,
+  EnvironmentalImpactCard,
 } from '@/components/analytics';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useScheduleAnalytics } from '@/hooks/use-schedule-analytics';
@@ -263,6 +265,23 @@ export default function AnalyticsPage() {
               )}
             </CardContent>
           </Card>
+        </div>
+
+        {/* Impact Metrics Section */}
+        <div className="mt-6">
+          <h3 className="text-lg font-semibold mb-4 text-muted-foreground">
+            System Impact (Based on Collected Data)
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <EconomicImpactCard
+              impact={historicalData?.impactMetrics?.economic || null}
+              loading={historicalLoading}
+            />
+            <EnvironmentalImpactCard
+              impact={historicalData?.impactMetrics?.environmental || null}
+              loading={historicalLoading}
+            />
+          </div>
         </div>
       </div>
     </div>

@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { parseQueryParams, historicalQuerySchema } from '@/lib/validation/schemas';
+import { calculateDelaysBatch } from '@/lib/mta/schedule-lookup';
+import {
+  calculateEconomicImpact,
+  calculateEnvironmentalImpact,
+  calculateDelayDistribution,
+  delayDistributionToChartData,
+} from '@/lib/analytics/impact-calculator';
 
 /**
  * GET /api/v1/analytics/historical
@@ -69,41 +76,51 @@ export async function GET(request: NextRequest) {
       routeBreakdown = [];
     }
 
-    // Get delay distribution from arrival events (only those with delay data)
+    // Get arrivals for delay calculation
     const arrivals = await db.arrivalEvent.findMany({
-      where: {
-        recordedAt: { gte: lastHour },
-        delaySeconds: { not: null }, // Only include arrivals with calculated delays
+      where: { recordedAt: { gte: lastHour } },
+      select: {
+        tripId: true,
+        stationId: true,
+        predictedArrival: true,
+        delaySeconds: true, // May already be calculated
       },
-      select: { delaySeconds: true },
     }).catch(() => []);
 
-    // Bucket delays (no unknown category - we filtered nulls above)
-    const delayBuckets: Record<string, number> = {
-      on_time: 0,
-      '0-2 min': 0,
-      '2-5 min': 0,
-      '5-10 min': 0,
-      '10+ min': 0,
-    };
+    // Calculate delays: use pre-calculated if available, otherwise compute from schedule
+    const delayValues: number[] = [];
 
-    for (const arr of arrivals) {
-      if (arr.delaySeconds! <= 0) {
-        delayBuckets.on_time++;
-      } else if (arr.delaySeconds! <= 120) {
-        delayBuckets['0-2 min']++;
-      } else if (arr.delaySeconds! <= 300) {
-        delayBuckets['2-5 min']++;
-      } else if (arr.delaySeconds! <= 600) {
-        delayBuckets['5-10 min']++;
-      } else {
-        delayBuckets['10+ min']++;
+    // Separate arrivals that need calculation
+    const needsCalculation = arrivals.filter((a) => a.delaySeconds === null);
+    const hasCalculation = arrivals.filter((a) => a.delaySeconds !== null);
+
+    // Add pre-calculated delays
+    for (const arr of hasCalculation) {
+      delayValues.push(arr.delaySeconds!);
+    }
+
+    // Calculate delays for those without (compare to GTFS schedule)
+    if (needsCalculation.length > 0) {
+      const batchInput = needsCalculation.map((arr) => ({
+        tripId: arr.tripId,
+        stationId: arr.stationId,
+        predictedArrival: new Date(arr.predictedArrival),
+      }));
+
+      const calculatedDelays = await calculateDelaysBatch(batchInput);
+      for (const delay of calculatedDelays.values()) {
+        delayValues.push(delay);
       }
     }
 
-    const delayDistribution = Object.entries(delayBuckets)
-      .filter(([, count]) => count > 0)
-      .map(([bucket, count]) => ({ bucket, count }));
+    // Use impact calculator for bucketing
+    const delayStats = delayValues.length > 0
+      ? calculateDelayDistribution(delayValues)
+      : null;
+
+    const delayDistribution = delayStats
+      ? delayDistributionToChartData(delayStats)
+      : [];
 
     // Get collection stats
     const [totalSnapshots, totalArrivals, totalAlerts, lastCollection] =
@@ -129,6 +146,18 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
+    // Count unique trips for more accurate ridership estimation
+    const uniqueTripsResult = await db.trainSnapshot.findMany({
+      where: { createdAt: { gte: since } },
+      distinct: ['tripId'],
+      select: { tripId: true },
+    }).catch(() => []);
+    const uniqueTrips = uniqueTripsResult.length;
+
+    // Calculate impact metrics using total snapshots and unique trips
+    const economicImpact = calculateEconomicImpact(totalSnapshots, uniqueTrips);
+    const environmentalImpact = calculateEnvironmentalImpact(economicImpact.estimatedRiders);
+
     return NextResponse.json({
       trainHistory,
       routeBreakdown: routeBreakdown.map((r) => ({
@@ -136,10 +165,19 @@ export async function GET(request: NextRequest) {
         count: r._count.tripId,
       })),
       delayDistribution,
+      delayStats: delayStats ? {
+        total: delayStats.total,
+        onTimePercentage: delayStats.onTimePercentage,
+      } : null,
+      impactMetrics: {
+        economic: economicImpact,
+        environmental: environmentalImpact,
+      },
       collectionStats: {
         totalSnapshots,
         totalArrivals,
         totalAlerts,
+        uniqueTrips,
         lastCollection: lastCollection?.createdAt?.toISOString() || null,
         lastStatus: lastCollection?.status || null,
         dataRange: oldest && newest

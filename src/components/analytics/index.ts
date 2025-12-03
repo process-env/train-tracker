@@ -12,3 +12,7 @@ export { ScheduleFrequencyCard } from './ScheduleFrequencyCard';
 export { BusiestStationsCard } from './BusiestStationsCard';
 export { RouteProfileCard } from './RouteProfileCard';
 export { ServiceSpanCard } from './ServiceSpanCard';
+
+// Impact components
+export { EconomicImpactCard } from './EconomicImpactCard';
+export { EnvironmentalImpactCard } from './EnvironmentalImpactCard';
