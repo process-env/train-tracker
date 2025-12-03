@@ -84,4 +84,17 @@ export const mtaApi = {
     if (!res.ok) throw new Error('Failed to fetch historical data');
     return res.json();
   },
+
+  // Schedule data (GTFS static)
+  getScheduleStats: async () => {
+    const res = await fetch('/api/v1/schedule');
+    if (!res.ok) throw new Error('Failed to fetch schedule stats');
+    return res.json();
+  },
+
+  getRouteSchedule: async (routeId: string) => {
+    const res = await fetch(`/api/v1/schedule?routeId=${routeId}`);
+    if (!res.ok) throw new Error('Failed to fetch route schedule');
+    return res.json();
+  },
 };

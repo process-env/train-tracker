@@ -1,58 +1,26 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useTrainPositions } from './use-train-positions';
-import { useTrainsStore } from '@/stores';
+import { createMockTrainPosition } from '@/test/factories';
+import { QueryWrapper } from '@/test/utils/query-wrapper';
 
 // Mock fetch
 global.fetch = vi.fn();
 
 describe('useTrainPositions', () => {
-  const mockStops = [
-    { id: '101N', lat: 40.7128, lon: -74.006, name: 'Station A North' },
-    { id: '102N', lat: 40.72, lon: -73.99, name: 'Station B North' },
+  const mockTrains = [
+    createMockTrainPosition({ tripId: 'trip1', routeId: '1' }),
+    createMockTrainPosition({ tripId: 'trip2', routeId: 'A' }),
+    createMockTrainPosition({ tripId: 'trip3', routeId: 'B' }),
   ];
 
-  const createMockFeedEntity = () => ({
-    routeId: 'A',
-    tripId: 'trip1',
-    stopUpdates: [
-      {
-        stopId: '101N',
-        arrival: { time: new Date(Date.now() - 60000).toISOString() },
-        departure: { time: new Date(Date.now() - 55000).toISOString() },
-      },
-      {
-        stopId: '102N',
-        arrival: { time: new Date(Date.now() + 120000).toISOString() },
-      },
-    ],
-  });
-
   beforeEach(() => {
-    // Reset store state
-    useTrainsStore.setState({
-      trains: {},
-      arrivalsByStation: {},
-      lastFeedUpdate: {},
-    });
-
     vi.clearAllMocks();
 
-    // Setup default fetch mock
-    (global.fetch as any).mockImplementation((url: string) => {
-      if (url.includes('/api/v1/stops')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve(mockStops),
-        });
-      }
-      if (url.includes('/api/v1/feed/')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve([createMockFeedEntity()]),
-        });
-      }
-      return Promise.reject(new Error('Unknown URL'));
+    // Default mock for fetch
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ trains: mockTrains, updatedAt: new Date().toISOString() }),
     });
   });
 
@@ -60,155 +28,112 @@ describe('useTrainPositions', () => {
     vi.clearAllTimers();
   });
 
-  it('loads stops dictionary on mount', async () => {
-    renderHook(() => useTrainPositions(['ACE'], { refreshInterval: 0 }));
+  it('fetches trains on mount', async () => {
+    renderHook(() => useTrainPositions({ refreshInterval: 0 }), { wrapper: QueryWrapper });
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/v1/stops');
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/trains');
     });
   });
 
-  it('fetches from specified feed groups', async () => {
-    renderHook(() => useTrainPositions(['ACE', 'BDFM'], { refreshInterval: 0 }));
-
-    await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/v1/feed/ACE');
-      expect(global.fetch).toHaveBeenCalledWith('/api/v1/feed/BDFM');
-    });
-  });
-
-  it('does not fetch feeds when disabled', async () => {
-    renderHook(() => useTrainPositions(['ACE'], { enabled: false, refreshInterval: 0 }));
+  it('does not fetch when disabled', async () => {
+    renderHook(() => useTrainPositions({ enabled: false }), { wrapper: QueryWrapper });
 
     // Give some time for potential fetch
-    await new Promise((r) => setTimeout(r, 100));
-
-    // Should fetch stops but not feeds
-    const feedCalls = (global.fetch as any).mock.calls.filter(
-      (call: string[]) => call[0].includes('/api/v1/feed/')
-    );
-    expect(feedCalls.length).toBe(0);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 
-  it('calculates train positions', async () => {
-    const { result } = renderHook(() =>
-      useTrainPositions(['ACE'], { refreshInterval: 0 })
-    );
+  it('returns trains array', async () => {
+    const { result } = renderHook(() => useTrainPositions({ refreshInterval: 0 }), { wrapper: QueryWrapper });
 
     await waitFor(() => {
-      expect(result.current.trains.length).toBeGreaterThan(0);
+      expect(result.current.trains).toHaveLength(3);
     });
-
-    const train = result.current.trains[0];
-    expect(train).toHaveProperty('lat');
-    expect(train).toHaveProperty('lon');
-    expect(train).toHaveProperty('heading');
-    expect(train).toHaveProperty('nextStopId');
-    expect(train).toHaveProperty('nextStopName');
-    expect(train).toHaveProperty('eta');
   });
 
   it('includes route and trip IDs', async () => {
-    const { result } = renderHook(() =>
-      useTrainPositions(['ACE'], { refreshInterval: 0 })
-    );
+    const { result } = renderHook(() => useTrainPositions({ refreshInterval: 0 }), { wrapper: QueryWrapper });
 
     await waitFor(() => {
       expect(result.current.trains.length).toBeGreaterThan(0);
     });
 
     const train = result.current.trains[0];
-    expect(train.routeId).toBe('A');
-    expect(train.tripId).toBe('trip1');
+    expect(train).toHaveProperty('tripId');
+    expect(train).toHaveProperty('routeId');
+    expect(train).toHaveProperty('lat');
+    expect(train).toHaveProperty('lon');
   });
 
-  it('handles missing feed data gracefully', async () => {
-    (global.fetch as any).mockImplementation((url: string) => {
-      if (url.includes('/api/v1/stops')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve(mockStops),
-        });
-      }
-      // Feed returns empty or invalid data
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve([]),
-      });
-    });
+  it('handles fetch errors', async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Network error'));
 
-    const { result } = renderHook(() =>
-      useTrainPositions(['ACE'], { refreshInterval: 0 })
-    );
+    const { result } = renderHook(() => useTrainPositions({ refreshInterval: 0 }), { wrapper: QueryWrapper });
 
     await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    // Should have empty trains, but no error since feeds succeeded
-    expect(result.current.trains).toEqual([]);
-  });
-
-  it('updates trains store', async () => {
-    renderHook(() => useTrainPositions(['ACE'], { refreshInterval: 0 }));
-
-    await waitFor(() => {
-      const { trains } = useTrainsStore.getState();
-      expect(Object.keys(trains).length).toBeGreaterThan(0);
+      expect(result.current.error).toBe('Network error');
     });
   });
 
-  it('sets feed timestamps', async () => {
-    renderHook(() => useTrainPositions(['ACE'], { refreshInterval: 0 }));
+  it('handles non-ok response', async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: false,
+    });
+
+    const { result } = renderHook(() => useTrainPositions({ refreshInterval: 0 }), { wrapper: QueryWrapper });
 
     await waitFor(() => {
-      const { lastFeedUpdate } = useTrainsStore.getState();
-      expect(lastFeedUpdate['ACE']).toBeDefined();
+      expect(result.current.error).toContain('Failed to fetch trains');
     });
   });
 
   it('provides refetch function', async () => {
-    const { result } = renderHook(() =>
-      useTrainPositions(['ACE'], { refreshInterval: 0 })
-    );
+    const { result } = renderHook(() => useTrainPositions({ refreshInterval: 0 }), { wrapper: QueryWrapper });
 
     await waitFor(() => {
-      expect(typeof result.current.refetch).toBe('function');
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    await act(async () => {
+      await result.current.refetch();
+    });
+
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('returns updatedAt timestamp', async () => {
+    const { result } = renderHook(() => useTrainPositions({ refreshInterval: 0 }), { wrapper: QueryWrapper });
+
+    await waitFor(() => {
+      expect(result.current.updatedAt).toBeDefined();
     });
   });
 
-  it('returns trains array', async () => {
-    const { result } = renderHook(() =>
-      useTrainPositions(['ACE'], { refreshInterval: 0 })
-    );
-
-    await waitFor(() => {
-      expect(Array.isArray(result.current.trains)).toBe(true);
-    });
+  it('starts with isLoading true', () => {
+    const { result } = renderHook(() => useTrainPositions({ refreshInterval: 0 }), { wrapper: QueryWrapper });
+    expect(result.current.isLoading).toBe(true);
   });
 
-  it('handles empty feed response', async () => {
-    (global.fetch as any).mockImplementation((url: string) => {
-      if (url.includes('/api/v1/stops')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve(mockStops),
-        });
-      }
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve([]),
-      });
-    });
-
-    const { result } = renderHook(() =>
-      useTrainPositions(['ACE'], { refreshInterval: 0 })
-    );
+  it('sets isLoading to false after fetch', async () => {
+    const { result } = renderHook(() => useTrainPositions({ refreshInterval: 0 }), { wrapper: QueryWrapper });
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
     });
+  });
 
-    expect(result.current.trains).toEqual([]);
+  it('handles empty response', async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ trains: [], updatedAt: new Date().toISOString() }),
+    });
+
+    const { result } = renderHook(() => useTrainPositions({ refreshInterval: 0 }), { wrapper: QueryWrapper });
+
+    await waitFor(() => {
+      expect(result.current.trains).toHaveLength(0);
+      expect(result.current.isLoading).toBe(false);
+    });
   });
 });

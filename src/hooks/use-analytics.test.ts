@@ -1,30 +1,52 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { renderHook, waitFor, act } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import { useAnalytics } from './use-analytics';
-import { useTrainsStore } from '@/stores';
 import { createMockTrainPosition } from '@/test/factories';
+import { QueryWrapper } from '@/test/utils/query-wrapper';
+import { FEED_GROUPS } from '@/lib/constants';
 
 // Mock fetch
 global.fetch = vi.fn();
 
 describe('useAnalytics', () => {
-  beforeEach(() => {
-    // Reset store state with some trains
-    useTrainsStore.setState({
-      trains: {
-        trip1: createMockTrainPosition({ tripId: 'trip1', routeId: 'A' }),
-        trip2: createMockTrainPosition({ tripId: 'trip2', routeId: 'A' }),
-        trip3: createMockTrainPosition({ tripId: 'trip3', routeId: 'B' }),
-      },
-      arrivalsByStation: {},
-      lastFeedUpdate: {},
-    });
+  const mockTrains = [
+    createMockTrainPosition({ tripId: 'trip1', routeId: 'A' }),
+    createMockTrainPosition({ tripId: 'trip2', routeId: 'A' }),
+    createMockTrainPosition({ tripId: 'trip3', routeId: 'B' }),
+  ];
 
+  beforeEach(() => {
     vi.clearAllMocks();
 
-    (global.fetch as any).mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve([{ tripId: 'test' }]),
+    // Mock all fetch calls
+    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      // Trains endpoint
+      if (url === '/api/v1/trains') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ trains: mockTrains, updatedAt: new Date().toISOString() }),
+        });
+      }
+      // Feed status endpoints
+      if (url.startsWith('/api/v1/feed/')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([{ tripId: 'test' }]),
+        });
+      }
+      // Historical data endpoint
+      if (url.startsWith('/api/v1/analytics/historical')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            trainHistory: [],
+            delayDistribution: [],
+            collectionStats: { totalSnapshots: 0 },
+          }),
+        });
+      }
+      // Default
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
     });
   });
 
@@ -32,14 +54,13 @@ describe('useAnalytics', () => {
     vi.clearAllTimers();
   });
 
-  it('starts with loading true and null data', () => {
-    const { result } = renderHook(() => useAnalytics());
+  it('starts with loading true', () => {
+    const { result } = renderHook(() => useAnalytics(), { wrapper: QueryWrapper });
     expect(result.current.loading).toBe(true);
-    expect(result.current.data).toBeNull();
   });
 
-  it('calculates route activity from store trains', async () => {
-    const { result } = renderHook(() => useAnalytics());
+  it('calculates route activity from trains', async () => {
+    const { result } = renderHook(() => useAnalytics(), { wrapper: QueryWrapper });
 
     await waitFor(() => {
       expect(result.current.data).not.toBeNull();
@@ -53,7 +74,7 @@ describe('useAnalytics', () => {
   });
 
   it('generates timeline data', async () => {
-    const { result } = renderHook(() => useAnalytics());
+    const { result } = renderHook(() => useAnalytics(), { wrapper: QueryWrapper });
 
     await waitFor(() => {
       expect(result.current.data?.timeline).toBeDefined();
@@ -66,7 +87,7 @@ describe('useAnalytics', () => {
   });
 
   it('calculates stats', async () => {
-    const { result } = renderHook(() => useAnalytics());
+    const { result } = renderHook(() => useAnalytics(), { wrapper: QueryWrapper });
 
     await waitFor(() => {
       expect(result.current.data?.stats).toBeDefined();
@@ -79,7 +100,7 @@ describe('useAnalytics', () => {
   });
 
   it('sets loading to false after fetch', async () => {
-    const { result } = renderHook(() => useAnalytics());
+    const { result } = renderHook(() => useAnalytics(), { wrapper: QueryWrapper });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -87,22 +108,43 @@ describe('useAnalytics', () => {
   });
 
   it('handles fetch errors gracefully', async () => {
-    (global.fetch as any).mockRejectedValue(new Error('Network error'));
+    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url === '/api/v1/trains') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ trains: mockTrains, updatedAt: new Date().toISOString() }),
+        });
+      }
+      // Feed endpoints fail
+      if (url.startsWith('/api/v1/feed/')) {
+        return Promise.resolve({ ok: false });
+      }
+      if (url.startsWith('/api/v1/analytics/historical')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            trainHistory: [],
+            delayDistribution: [],
+            collectionStats: { totalSnapshots: 0 },
+          }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
 
-    const { result } = renderHook(() => useAnalytics());
+    const { result } = renderHook(() => useAnalytics(), { wrapper: QueryWrapper });
 
     // The hook catches errors internally - it should still complete
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
     });
 
-    // The hook may or may not set error depending on implementation
-    // What's important is it doesn't crash
+    // Data should still be defined (with error feeds)
     expect(result.current.data).toBeDefined();
   });
 
   it('provides refresh function', async () => {
-    const { result } = renderHook(() => useAnalytics());
+    const { result } = renderHook(() => useAnalytics(), { wrapper: QueryWrapper });
 
     await waitFor(() => {
       expect(typeof result.current.refresh).toBe('function');
@@ -110,7 +152,7 @@ describe('useAnalytics', () => {
   });
 
   it('marks feed as healthy on successful fetch', async () => {
-    const { result } = renderHook(() => useAnalytics());
+    const { result } = renderHook(() => useAnalytics(), { wrapper: QueryWrapper });
 
     await waitFor(() => {
       const healthyFeeds = result.current.data?.feedStatus.filter(
@@ -121,9 +163,31 @@ describe('useAnalytics', () => {
   });
 
   it('marks feed as error on failed fetch', async () => {
-    (global.fetch as any).mockResolvedValue({ ok: false });
+    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url === '/api/v1/trains') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ trains: mockTrains, updatedAt: new Date().toISOString() }),
+        });
+      }
+      // All feed endpoints return error
+      if (url.startsWith('/api/v1/feed/')) {
+        return Promise.resolve({ ok: false });
+      }
+      if (url.startsWith('/api/v1/analytics/historical')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            trainHistory: [],
+            delayDistribution: [],
+            collectionStats: { totalSnapshots: 0 },
+          }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
 
-    const { result } = renderHook(() => useAnalytics());
+    const { result } = renderHook(() => useAnalytics(), { wrapper: QueryWrapper });
 
     await waitFor(() => {
       const errorFeeds = result.current.data?.feedStatus.filter(
@@ -134,7 +198,7 @@ describe('useAnalytics', () => {
   });
 
   it('includes all subway routes in activity', async () => {
-    const { result } = renderHook(() => useAnalytics());
+    const { result } = renderHook(() => useAnalytics(), { wrapper: QueryWrapper });
 
     await waitFor(() => {
       expect(result.current.data?.routeActivity.length).toBeGreaterThan(0);

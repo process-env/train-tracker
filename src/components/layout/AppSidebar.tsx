@@ -8,7 +8,6 @@ import {
   Train,
   Bell,
   Settings,
-  ChevronUp,
 } from 'lucide-react';
 
 import {

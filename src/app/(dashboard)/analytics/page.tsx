@@ -1,6 +1,7 @@
 'use client';
 
-import { Train, MapPin, Clock, Activity, RefreshCw } from 'lucide-react';
+import { useMemo } from 'react';
+import { Train, MapPin, Clock, Activity, RefreshCw, Calendar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,13 +14,37 @@ import {
   HistoricalDataCard,
   TrainHistoryChart,
   DelayDistributionChart,
+  ScheduleFrequencyCard,
+  BusiestStationsCard,
+  RouteProfileCard,
+  ServiceSpanCard,
 } from '@/components/analytics';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { useScheduleAnalytics } from '@/hooks/use-schedule-analytics';
 
 export default function AnalyticsPage() {
-  // All data now comes from useAnalytics hook (trains, feeds, historical - all parallel)
+  // Real-time data from useAnalytics hook
   const { data, historicalData, historicalLoading, loading, error, refresh } =
     useAnalytics();
+
+  // Schedule data from GTFS static
+  const {
+    data: scheduleData,
+    isLoading: scheduleLoading,
+    error: scheduleError,
+  } = useScheduleAnalytics();
+
+  // Calculate active trains per route for route profile
+  const activeTrainsByRoute = useMemo(() => {
+    if (!data?.routeActivity) return {};
+    return data.routeActivity.reduce(
+      (acc, r) => {
+        acc[r.routeId] = r.trainCount;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
+  }, [data?.routeActivity]);
 
   if (error) {
     return (
@@ -87,52 +112,108 @@ export default function AnalyticsPage() {
         ) : null}
       </div>
 
-      {/* Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Route Activity */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Train Count by Route</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <Skeleton className="h-[300px]" />
-            ) : data ? (
-              <RouteActivityChart data={data.routeActivity} />
-            ) : null}
-          </CardContent>
-        </Card>
+      {/* Schedule Intelligence Section */}
+      <div className="border-t pt-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Calendar className="h-5 w-5" />
+          <h2 className="text-xl font-semibold">Schedule Intelligence</h2>
+          {scheduleData && (
+            <span className="text-sm text-muted-foreground ml-2">
+              ({scheduleData.serviceDay} schedule • {scheduleData.totalTrips.toLocaleString()} trips)
+            </span>
+          )}
+        </div>
 
-        {/* Arrivals Timeline */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Arrivals & Departures (Last Hour)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <Skeleton className="h-[300px]" />
-            ) : data ? (
-              <ArrivalsTimelineChart data={data.timeline} />
-            ) : null}
-          </CardContent>
-        </Card>
+        {scheduleLoading ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Skeleton className="h-[400px]" />
+            <Skeleton className="h-[400px]" />
+          </div>
+        ) : scheduleError ? (
+          <div className="p-4 text-center text-muted-foreground">
+            Failed to load schedule data
+          </div>
+        ) : scheduleData ? (
+          <>
+            {/* Service Hours Overview */}
+            <ServiceSpanCard
+              routeStats={scheduleData.routeStats}
+              serviceDay={scheduleData.serviceDay}
+            />
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+              {/* Schedule Frequency */}
+              <ScheduleFrequencyCard
+                routeStats={scheduleData.routeStats}
+                serviceDay={scheduleData.serviceDay}
+              />
+
+              {/* Route Profile */}
+              <RouteProfileCard
+                routeStats={scheduleData.routeStats}
+                activeTrains={activeTrainsByRoute}
+              />
+            </div>
+
+            {/* Busiest Stations */}
+            <div className="mt-6">
+              <BusiestStationsCard stations={scheduleData.busiestStations} />
+            </div>
+          </>
+        ) : null}
       </div>
 
-      {/* Bottom Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Feed Status */}
-        {loading ? (
-          <Skeleton className="h-[300px]" />
-        ) : data ? (
-          <FeedStatusCard feeds={data.feedStatus} />
-        ) : null}
+      {/* Real-Time Performance Section */}
+      <div className="border-t pt-6">
+        <h2 className="text-xl font-semibold mb-4">Real-Time Performance</h2>
 
-        {/* Alert Status */}
-        <AlertStatusCard />
+        {/* Charts Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Route Activity */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Train Count by Route</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <Skeleton className="h-[300px]" />
+              ) : data ? (
+                <RouteActivityChart data={data.routeActivity} />
+              ) : null}
+            </CardContent>
+          </Card>
+
+          {/* Arrivals Timeline */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Arrivals & Departures (Last Hour)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <Skeleton className="h-[300px]" />
+              ) : data ? (
+                <ArrivalsTimelineChart data={data.timeline} />
+              ) : null}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Bottom Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+          {/* Feed Status */}
+          {loading ? (
+            <Skeleton className="h-[300px]" />
+          ) : data ? (
+            <FeedStatusCard feeds={data.feedStatus} />
+          ) : null}
+
+          {/* Alert Status */}
+          <AlertStatusCard />
+        </div>
       </div>
 
       {/* Historical Data Section */}
-      <div className="border-t pt-6 mt-6">
+      <div className="border-t pt-6">
         <h2 className="text-xl font-semibold mb-4">Historical Data</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

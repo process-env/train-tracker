@@ -35,7 +35,7 @@ export function TrainHistoryChart({ data, compact = false }: TrainHistoryChartPr
 
   const formattedData = data.map((d) => ({
     ...d,
-    timeLabel: format(new Date(d.time), 'HH:mm'),
+    timeLabel: format(new Date(d.time), 'h a'), // "8 AM", "9 PM" format
     dateLabel: format(new Date(d.time), 'MMM d'),
   }));
 
