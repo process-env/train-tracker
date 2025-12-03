@@ -14,21 +14,19 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 export async function GET(request: NextRequest) {
   try {
-    // Verify cron secret for security
+    // Optional: Verify cron secret for security
+    // To enable auth, set CRON_SECRET in Vercel and add Authorization header in cron-job.org
     const authHeader = request.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
 
-    // In development, allow without secret
-    const isDev = process.env.NODE_ENV === 'development';
-
-    if (!isDev && cronSecret) {
-      if (authHeader !== `Bearer ${cronSecret}`) {
-        console.warn('Cron collect: Unauthorized attempt');
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        );
-      }
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+      // Only enforce auth if CRON_SECRET is set AND header doesn't match
+      // For cron-job.org without custom headers, leave CRON_SECRET unset in Vercel
+      console.warn('Cron collect: Unauthorized attempt');
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
     // Dynamic imports to avoid Turbopack module evaluation issues
