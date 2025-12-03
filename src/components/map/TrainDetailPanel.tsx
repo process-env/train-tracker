@@ -17,13 +17,15 @@ export function TrainDetailPanel({ train, onClose }: TrainDetailPanelProps) {
   if (!train) return null;
 
   const direction = getDirectionFromStopId(train.nextStopId);
-  const directionLabel = getDirectionLabel(direction);
   const DirectionIcon = direction === 'N' ? ArrowUp : ArrowDown;
   const color = getRouteColor(train.routeId);
   const textColor = getTextColorForBackground(color);
 
+  // Use headsign if available, otherwise fall back to direction label
+  const destinationLabel = train.headsign || getDirectionLabel(direction);
+
   return (
-    <div className="absolute top-4 right-4 w-80 z-10 animate-in slide-in-from-right duration-200">
+    <div className="absolute top-4 right-6 w-80 z-10 animate-in slide-in-from-right duration-200">
       <Card className="bg-background/95 backdrop-blur shadow-xl border-border/50">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
@@ -38,7 +40,7 @@ export function TrainDetailPanel({ train, onClose }: TrainDetailPanelProps) {
                 <CardTitle className="text-base">Train {train.routeId}</CardTitle>
                 <div className="flex items-center gap-1 text-sm text-muted-foreground">
                   <DirectionIcon className="h-3 w-3" />
-                  <span>{directionLabel}</span>
+                  <span>{destinationLabel}</span>
                 </div>
               </div>
             </div>

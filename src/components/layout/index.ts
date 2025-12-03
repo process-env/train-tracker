@@ -1,2 +1,2 @@
-export { Sidebar } from './Sidebar';
+export { AppSidebar } from './AppSidebar';
 export { RouteFilter } from './RouteFilter';

@@ -1,9 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { Database, RefreshCw, Play, Pause, Clock, TrendingUp } from 'lucide-react';
+import { Database, Clock, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { formatDistanceToNow } from 'date-fns';
 
 interface CollectionStats {
@@ -21,19 +19,9 @@ interface CollectionStats {
 
 interface HistoricalDataCardProps {
   stats: CollectionStats | null;
-  onCollect: () => Promise<void>;
-  isCollecting: boolean;
-  autoCollectEnabled: boolean;
-  onToggleAutoCollect: () => void;
 }
 
-export function HistoricalDataCard({
-  stats,
-  onCollect,
-  isCollecting,
-  autoCollectEnabled,
-  onToggleAutoCollect,
-}: HistoricalDataCardProps) {
+export function HistoricalDataCard({ stats }: HistoricalDataCardProps) {
   const formatNumber = (n: number) => n.toLocaleString();
 
   return (
@@ -43,52 +31,22 @@ export function HistoricalDataCard({
           <Database className="h-4 w-4" />
           Data Collection
         </CardTitle>
-        <div className="flex gap-2">
-          <Button
-            variant={autoCollectEnabled ? 'default' : 'outline'}
-            size="sm"
-            onClick={onToggleAutoCollect}
-            className="h-7 px-2"
-          >
-            {autoCollectEnabled ? (
-              <>
-                <Pause className="h-3 w-3 mr-1" />
-                Auto
-              </>
-            ) : (
-              <>
-                <Play className="h-3 w-3 mr-1" />
-                Auto
-              </>
-            )}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onCollect}
-            disabled={isCollecting}
-            className="h-7 px-2"
-          >
-            <RefreshCw className={`h-3 w-3 mr-1 ${isCollecting ? 'animate-spin' : ''}`} />
-            Collect
-          </Button>
-        </div>
       </CardHeader>
       <CardContent>
         {stats ? (
           <div className="space-y-3">
-            <div className="grid grid-cols-3 gap-4">
-              <div>
+            <div className="flex flex-col gap-2">
+              <div className="flex justify-between items-center">
                 <p className="text-xs text-muted-foreground">Snapshots</p>
-                <p className="text-lg font-semibold">{formatNumber(stats.totalSnapshots)}</p>
+                <p className="text-sm font-semibold">{formatNumber(stats.totalSnapshots)}</p>
               </div>
-              <div>
+              <div className="flex justify-between items-center">
                 <p className="text-xs text-muted-foreground">Arrivals</p>
-                <p className="text-lg font-semibold">{formatNumber(stats.totalArrivals)}</p>
+                <p className="text-sm font-semibold">{formatNumber(stats.totalArrivals)}</p>
               </div>
-              <div>
+              <div className="flex justify-between items-center">
                 <p className="text-xs text-muted-foreground">Alerts</p>
-                <p className="text-lg font-semibold">{formatNumber(stats.totalAlerts)}</p>
+                <p className="text-sm font-semibold">{formatNumber(stats.totalAlerts)}</p>
               </div>
             </div>
 
@@ -117,16 +75,14 @@ export function HistoricalDataCard({
               </div>
             )}
 
-            {autoCollectEnabled && (
-              <p className="text-xs text-muted-foreground">
-                Auto-collecting every 5 minutes
-              </p>
-            )}
+            <p className="text-xs text-muted-foreground">
+              Auto-collecting daily at 12:00 AM
+            </p>
           </div>
         ) : (
           <div className="text-center py-4 text-muted-foreground">
             <p className="text-sm">No data collected yet</p>
-            <p className="text-xs mt-1">Click Collect to start gathering data</p>
+            <p className="text-xs mt-1">Data collection runs daily at 12:00 AM</p>
           </div>
         )}
       </CardContent>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runCollection, cleanupOldData } from '@/lib/data-collector';
+import { parseQueryParams, collectQuerySchema } from '@/lib/validation/schemas';
 
 /**
  * POST /api/v1/collect
@@ -13,9 +14,24 @@ import { runCollection, cleanupOldData } from '@/lib/data-collector';
  */
 export async function POST(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const shouldCleanup = searchParams.get('cleanup') === 'true';
-    const daysToKeep = parseInt(searchParams.get('days') || '30', 10);
+    // Verify auth for security (same pattern as cron/cleanup)
+    const authHeader = request.headers.get('authorization');
+    const cronSecret = process.env.CRON_SECRET;
+    const isNonProd = process.env.NODE_ENV !== 'production';
+
+    if (!isNonProd && cronSecret) {
+      if (authHeader !== `Bearer ${cronSecret}`) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    }
+
+    // Validate query params
+    const validation = parseQueryParams(request.nextUrl.searchParams, collectQuerySchema);
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
+    }
+
+    const { cleanup: shouldCleanup, days: daysToKeep } = validation.data;
 
     // Run collection
     const result = await runCollection();
@@ -63,8 +79,19 @@ export async function POST(request: NextRequest) {
  *
  * Get collection statistics
  */
-export async function GET() {
+export async function GET(request?: NextRequest) {
   try {
+    // Verify auth for security (same pattern as cron/cleanup)
+    const authHeader = request?.headers.get('authorization');
+    const cronSecret = process.env.CRON_SECRET;
+    const isNonProd = process.env.NODE_ENV !== 'production';
+
+    if (!isNonProd && cronSecret) {
+      if (authHeader !== `Bearer ${cronSecret}`) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    }
+
     const { db } = await import('@/lib/db');
 
     // Get counts and recent activity

@@ -175,7 +175,7 @@ describe('GET /api/v1/analytics/historical', () => {
       vi.doUnmock('@/lib/db');
     });
 
-    it('requires hours parameter (no default)', async () => {
+    it('uses default hours value of 24 when not provided', async () => {
       const mockDb = {
         trainSnapshot: {
           findMany: vi.fn().mockResolvedValue([]),
@@ -197,8 +197,8 @@ describe('GET /api/v1/analytics/historical', () => {
       const request = new NextRequest('http://localhost/api/v1/analytics/historical');
       const response = await GET(request);
 
-      // Without hours param, validation returns 400 (schema doesn't accept null)
-      expect(response.status).toBe(400);
+      // Without hours param, uses default of 24 (better UX than requiring it)
+      expect(response.status).toBe(200);
 
       vi.doUnmock('@/lib/db');
     });

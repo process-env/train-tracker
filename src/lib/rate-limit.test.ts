@@ -47,7 +47,7 @@ describe('rate-limit', () => {
 
     it('returns correct config for /api/v1/feed', () => {
       const config = getRateLimitConfig('/api/v1/feed/ACE');
-      expect(config.limit).toBe(60);
+      expect(config.limit).toBe(200); // 8 feeds * ~4 polls/min * safety margin
     });
 
     it('returns correct config for /api/v1/analytics', () => {

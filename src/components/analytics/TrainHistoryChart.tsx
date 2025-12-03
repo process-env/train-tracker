@@ -19,13 +19,16 @@ interface TrainHistoryData {
 
 interface TrainHistoryChartProps {
   data: TrainHistoryData[];
+  compact?: boolean;
 }
 
-export function TrainHistoryChart({ data }: TrainHistoryChartProps) {
+export function TrainHistoryChart({ data, compact = false }: TrainHistoryChartProps) {
+  const height = compact ? 180 : 300;
+
   if (!data || data.length === 0) {
     return (
-      <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-        <p>No historical data yet. Start collecting to see trends.</p>
+      <div className={`h-[${height}px] flex items-center justify-center text-muted-foreground`}>
+        <p className={compact ? 'text-sm' : ''}>No historical data yet. Start collecting to see trends.</p>
       </div>
     );
   }
@@ -37,8 +40,14 @@ export function TrainHistoryChart({ data }: TrainHistoryChartProps) {
   }));
 
   return (
-    <ResponsiveContainer width="100%" height={300}>
-      <AreaChart data={formattedData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+    <ResponsiveContainer width="100%" height={height}>
+      <AreaChart
+        data={formattedData}
+        margin={compact
+          ? { top: 10, right: 10, left: -10, bottom: 0 }
+          : { top: 20, right: 30, left: 20, bottom: 5 }
+        }
+      >
         <defs>
           <linearGradient id="trainGradient" x1="0" y1="0" x2="0" y2="1">
             <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
@@ -49,9 +58,16 @@ export function TrainHistoryChart({ data }: TrainHistoryChartProps) {
         <XAxis
           dataKey="timeLabel"
           stroke="#888"
-          tick={{ fill: '#888', fontSize: 12 }}
+          tick={{ fill: '#888', fontSize: compact ? 10 : 12 }}
+          interval={compact ? 'preserveStartEnd' : 0}
+          tickLine={!compact}
         />
-        <YAxis stroke="#888" tick={{ fill: '#888', fontSize: 12 }} />
+        <YAxis
+          stroke="#888"
+          tick={{ fill: '#888', fontSize: compact ? 10 : 12 }}
+          width={compact ? 30 : 40}
+          tickLine={!compact}
+        />
         <Tooltip
           contentStyle={{
             backgroundColor: '#1a1a1a',
@@ -76,7 +92,7 @@ export function TrainHistoryChart({ data }: TrainHistoryChartProps) {
           stroke="#3b82f6"
           fillOpacity={1}
           fill="url(#trainGradient)"
-          strokeWidth={2}
+          strokeWidth={compact ? 1.5 : 2}
         />
       </AreaChart>
     </ResponsiveContainer>

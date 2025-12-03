@@ -5,22 +5,53 @@ import { useUIStore } from '@/stores';
 import { getRouteColor, ALL_ROUTES } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 
-const ROUTE_GROUPS = [
-  { label: '123', routes: ['1', '2', '3'] },
-  { label: '456', routes: ['4', '5', '6'] },
-  { label: '7', routes: ['7'] },
-  { label: 'ACE', routes: ['A', 'C', 'E'] },
-  { label: 'BDFM', routes: ['B', 'D', 'F', 'M'] },
-  { label: 'G', routes: ['G'] },
-  { label: 'JZ', routes: ['J', 'Z'] },
-  { label: 'L', routes: ['L'] },
-  { label: 'NQRW', routes: ['N', 'Q', 'R', 'W'] },
-  { label: 'S', routes: ['S'] },
-  { label: 'SIR', routes: ['SI'] },
-];
+interface RouteFilterProps {
+  compact?: boolean;
+}
 
-export function RouteFilter() {
+export function RouteFilter({ compact = false }: RouteFilterProps) {
   const { selectedRouteIds, toggleRouteFilter, clearRouteFilters } = useUIStore();
+
+  if (compact) {
+    // Compact vertical view - no scrollbar, flows naturally with sidebar scroll
+    return (
+      <div className="flex flex-col gap-1 items-center py-1">
+        {ALL_ROUTES.map((routeId) => {
+          const color = getRouteColor(routeId);
+          const isSelected = selectedRouteIds.includes(routeId);
+          const textColor = color === '#FCCC0A' ? '#000' : '#fff';
+
+          return (
+            <button
+              key={routeId}
+              onClick={() => toggleRouteFilter(routeId)}
+              className={cn(
+                'w-6 h-6 rounded-full text-[10px] font-bold flex items-center justify-center transition-all',
+                isSelected
+                  ? 'ring-2 ring-offset-1 ring-offset-background ring-primary'
+                  : 'opacity-50 hover:opacity-100'
+              )}
+              style={{
+                backgroundColor: color,
+                color: textColor,
+              }}
+            >
+              {routeId === 'SI' ? 'S' : routeId}
+            </button>
+          );
+        })}
+        {selectedRouteIds.length > 0 && (
+          <button
+            onClick={clearRouteFilters}
+            className="w-6 h-6 rounded-full text-[10px] bg-muted hover:bg-muted/80 flex items-center justify-center mt-1"
+            title="Clear filters"
+          >
+            ×
+          </button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">

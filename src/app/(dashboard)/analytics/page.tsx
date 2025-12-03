@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Train, MapPin, Clock, Activity, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,8 +17,6 @@ import {
 } from '@/components/analytics';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useTrainPositions } from '@/hooks';
-
-const COLLECTION_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 interface HistoricalData {
   trainHistory: Array<{ time: string; trainCount: number; routeCount: number }>;
@@ -41,9 +39,6 @@ export default function AnalyticsPage() {
 
   // Historical data state
   const [historicalData, setHistoricalData] = useState<HistoricalData | null>(null);
-  const [isCollecting, setIsCollecting] = useState(false);
-  const [autoCollectEnabled, setAutoCollectEnabled] = useState(false);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch historical data
   const fetchHistoricalData = useCallback(async () => {
@@ -57,47 +52,6 @@ export default function AnalyticsPage() {
       console.error('Failed to fetch historical data:', err);
     }
   }, []);
-
-  // Trigger data collection
-  const handleCollect = useCallback(async () => {
-    setIsCollecting(true);
-    try {
-      await fetch('/api/v1/collect', { method: 'POST' });
-      await fetchHistoricalData();
-    } catch (err) {
-      console.error('Collection failed:', err);
-    } finally {
-      setIsCollecting(false);
-    }
-  }, [fetchHistoricalData]);
-
-  // Toggle auto-collection
-  const toggleAutoCollect = useCallback(() => {
-    setAutoCollectEnabled((prev) => !prev);
-  }, []);
-
-  // Set up auto-collection interval
-  useEffect(() => {
-    if (autoCollectEnabled) {
-      // Collect immediately when enabled
-      handleCollect();
-
-      // Set up interval
-      intervalRef.current = setInterval(handleCollect, COLLECTION_INTERVAL);
-    } else {
-      // Clear interval when disabled
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    }
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [autoCollectEnabled, handleCollect]);
 
   // Load historical data on mount
   useEffect(() => {
@@ -218,36 +172,30 @@ export default function AnalyticsPage() {
       <div className="border-t pt-6 mt-6">
         <h2 className="text-xl font-semibold mb-4">Historical Data</h2>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Collection Controls */}
-          <HistoricalDataCard
-            stats={historicalData?.collectionStats || null}
-            onCollect={handleCollect}
-            isCollecting={isCollecting}
-            autoCollectEnabled={autoCollectEnabled}
-            onToggleAutoCollect={toggleAutoCollect}
-          />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Collection Stats */}
+          <HistoricalDataCard stats={historicalData?.collectionStats || null} />
 
           {/* Delay Distribution */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>Delay Distribution (Last Hour)</CardTitle>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Delay Distribution (Last Hour)</CardTitle>
             </CardHeader>
             <CardContent>
-              <DelayDistributionChart data={historicalData?.delayDistribution || []} />
+              <DelayDistributionChart data={historicalData?.delayDistribution || []} compact />
+            </CardContent>
+          </Card>
+
+          {/* Train History Chart */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Train Activity (Last 24 Hours)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <TrainHistoryChart data={historicalData?.trainHistory || []} compact />
             </CardContent>
           </Card>
         </div>
-
-        {/* Train History Chart */}
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Train Activity (Last 24 Hours)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <TrainHistoryChart data={historicalData?.trainHistory || []} />
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

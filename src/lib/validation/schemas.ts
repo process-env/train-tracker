@@ -35,12 +35,12 @@ export const limitParamSchema = z.coerce
   .default(100);
 
 /**
- * Boolean query parameter (true/false string, or null)
+ * Boolean query parameter (true/false string, or null/undefined)
  * Returns false for null/undefined, true only for 'true'
  */
 export const booleanParamSchema = z
   .string()
-  .nullable()
+  .nullish()
   .transform((val) => val === 'true');
 
 // ============================================================================
@@ -144,13 +144,12 @@ export function parseQueryParams<T extends z.ZodRawShape>(
   searchParams: URLSearchParams,
   schema: z.ZodObject<T>
 ): ValidationResult<z.infer<typeof schema>> {
-  const params: Record<string, string | undefined> = {};
+  const params: Record<string, string | null | undefined> = {};
 
   for (const key of Object.keys(schema.shape)) {
     const value = searchParams.get(key);
-    if (value !== null) {
-      params[key] = value;
-    }
+    // Include key even if null/undefined so schema defaults work
+    params[key] = value ?? undefined;
   }
 
   return validate(schema, params);

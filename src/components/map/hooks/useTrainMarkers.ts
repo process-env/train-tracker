@@ -92,19 +92,17 @@ export function useTrainMarkers(
 
         // Update popup content with latest train data
         const direction = getDirectionFromStopId(train.nextStopId);
-        const directionLabel = getDirectionLabel(direction);
         const color = getRouteColor(train.routeId);
 
         existingAnim.nextStopName = train.nextStopName;
         existingAnim.eta = train.eta;
         existingAnim.direction = direction;
 
-        existingAnim.popup.setHTML(createPopupHTML(train, color, directionLabel));
+        existingAnim.popup.setHTML(createPopupHTML(train, color));
       } else {
         // Create new marker
         const color = getRouteColor(train.routeId);
         const direction = getDirectionFromStopId(train.nextStopId);
-        const directionLabel = getDirectionLabel(direction);
 
         const el = document.createElement('div');
         el.className = 'train-marker';
@@ -131,7 +129,7 @@ export function useTrainMarkers(
           closeOnClick: false,
           offset: MAP_CONSTANTS.POPUP_OFFSET_TRAIN,
           className: 'train-popup',
-        }).setHTML(createPopupHTML(train, color, directionLabel));
+        }).setHTML(createPopupHTML(train, color));
 
         const marker = new maplibregl.Marker({ element: el })
           .setLngLat([train.lon, train.lat])
@@ -186,7 +184,11 @@ export function useTrainMarkers(
 /**
  * Creates HTML for train popup
  */
-function createPopupHTML(train: TrainPosition, color: string, directionLabel: string): string {
+function createPopupHTML(train: TrainPosition, color: string): string {
+  // Use headsign if available, otherwise fall back to direction label
+  const direction = getDirectionFromStopId(train.nextStopId);
+  const destinationLabel = train.headsign || getDirectionLabel(direction);
+
   return `
     <div style="padding: 8px 12px; background: #1a1a1a; border-radius: 6px; min-width: 160px;">
       <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
@@ -202,7 +204,7 @@ function createPopupHTML(train: TrainPosition, color: string, directionLabel: st
           font-weight: bold;
           color: ${getTextColorForBackground(color)};
         ">${train.routeId}</div>
-        <span style="color: #888; font-size: 12px;">${directionLabel}</span>
+        <span style="color: #888; font-size: 12px;">${destinationLabel}</span>
       </div>
       <div style="color: white; font-size: 13px; margin-bottom: 4px;">
         <strong>Next:</strong> ${train.nextStopName || 'Unknown'}

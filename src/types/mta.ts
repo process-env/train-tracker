@@ -90,6 +90,7 @@ export interface TrainPosition {
   nextStopId: string;
   nextStopName: string;
   eta: string;
+  headsign?: string;
 }
 
 // WebSocket events

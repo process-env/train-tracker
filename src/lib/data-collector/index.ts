@@ -12,6 +12,7 @@ import { fetchFeed } from '@/lib/mta/fetch-feed';
 import { fetchAlerts } from '@/lib/mta/fetch-alerts';
 import { calculateTrainPositions } from '@/lib/mta/train-positions';
 import { FEED_GROUPS } from '@/lib/mta/feed-groups';
+import { calculateDelay } from '@/lib/mta/load-schedule';
 
 export interface CollectionResult {
   trainSnapshots: number;
@@ -134,13 +135,26 @@ export async function collectArrivalEvents(): Promise<{
               ? 'S'
               : null;
 
+          const predictedArrival = new Date(stop.arrival.time);
+
+          // Calculate delay from schedule (fall back to GTFS-RT delay if no match)
+          let delaySeconds = stop.arrival.delay;
+          const calculatedDelay = await calculateDelay(
+            entity.tripId,
+            stop.stopId,
+            predictedArrival
+          );
+          if (calculatedDelay !== null) {
+            delaySeconds = calculatedDelay;
+          }
+
           arrivals.push({
             stationId: stop.stopId,
             routeId: entity.routeId,
             tripId: entity.tripId,
             direction,
-            predictedArrival: new Date(stop.arrival.time),
-            delaySeconds: stop.arrival.delay,
+            predictedArrival,
+            delaySeconds,
             feedGroupId: group.id,
             feedTimestamp,
             recordedAt,

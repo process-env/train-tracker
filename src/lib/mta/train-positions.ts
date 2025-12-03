@@ -1,5 +1,6 @@
 import type { FeedEntity, TrainPosition, Stop } from '@/types/mta';
 import { loadStops } from './load-stops';
+import { getTripHeadsignWithFallback } from './load-trips';
 
 /**
  * Calculate train positions by interpolating between stops.
@@ -82,6 +83,9 @@ export async function calculateTrainPositions(
       nextStopData.lon
     );
 
+    // Get headsign from trips data with shape-based fallback
+    const headsign = await getTripHeadsignWithFallback(tripId, routeId);
+
     positions.push({
       tripId,
       routeId,
@@ -91,6 +95,7 @@ export async function calculateTrainPositions(
       nextStopId: nextStop.stopId,
       nextStopName: nextStopData.name,
       eta: nextTime,
+      headsign: headsign ?? undefined,
     });
   }
 

@@ -1,19 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { parseQueryParams, historicalQuerySchema } from '@/lib/validation/schemas';
 
 /**
  * GET /api/v1/analytics/historical
  *
  * Get historical analytics data from collected snapshots
  * Query params:
- * - hours: Number of hours to look back (default: 24)
+ * - hours: Number of hours to look back (default: 24, max: 168)
  */
 export async function GET(request: NextRequest) {
   try {
+    const searchParams = request.nextUrl.searchParams;
+
+    // Validate query params
+    const validation = parseQueryParams(searchParams, historicalQuerySchema);
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
+    }
+
+    const { hours } = validation.data;
+
     // Dynamic import to avoid Turbopack module evaluation issues
     const { db } = await import('@/lib/db');
-
-    const searchParams = request.nextUrl.searchParams;
-    const hours = parseInt(searchParams.get('hours') || '24', 10);
 
     const since = new Date();
     since.setHours(since.getHours() - hours);
@@ -61,32 +69,32 @@ export async function GET(request: NextRequest) {
       routeBreakdown = [];
     }
 
-    // Get delay distribution from arrival events (simplified)
+    // Get delay distribution from arrival events (only those with delay data)
     const arrivals = await db.arrivalEvent.findMany({
-      where: { recordedAt: { gte: lastHour } },
+      where: {
+        recordedAt: { gte: lastHour },
+        delaySeconds: { not: null }, // Only include arrivals with calculated delays
+      },
       select: { delaySeconds: true },
     }).catch(() => []);
 
-    // Bucket delays
+    // Bucket delays (no unknown category - we filtered nulls above)
     const delayBuckets: Record<string, number> = {
       on_time: 0,
       '0-2 min': 0,
       '2-5 min': 0,
       '5-10 min': 0,
       '10+ min': 0,
-      unknown: 0,
     };
 
     for (const arr of arrivals) {
-      if (arr.delaySeconds === null) {
-        delayBuckets.unknown++;
-      } else if (arr.delaySeconds <= 0) {
+      if (arr.delaySeconds! <= 0) {
         delayBuckets.on_time++;
-      } else if (arr.delaySeconds <= 120) {
+      } else if (arr.delaySeconds! <= 120) {
         delayBuckets['0-2 min']++;
-      } else if (arr.delaySeconds <= 300) {
+      } else if (arr.delaySeconds! <= 300) {
         delayBuckets['2-5 min']++;
-      } else if (arr.delaySeconds <= 600) {
+      } else if (arr.delaySeconds! <= 600) {
         delayBuckets['5-10 min']++;
       } else {
         delayBuckets['10+ min']++;

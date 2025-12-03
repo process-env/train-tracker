@@ -16,6 +16,7 @@ interface DelayData {
 
 interface DelayDistributionChartProps {
   data: DelayData[];
+  compact?: boolean;
 }
 
 const COLORS: Record<string, string> = {
@@ -24,7 +25,6 @@ const COLORS: Record<string, string> = {
   '2-5 min': '#eab308',
   '5-10 min': '#f97316',
   '10+ min': '#ef4444',
-  unknown: '#6b7280',
 };
 
 const LABELS: Record<string, string> = {
@@ -33,14 +33,17 @@ const LABELS: Record<string, string> = {
   '2-5 min': '2-5 min late',
   '5-10 min': '5-10 min late',
   '10+ min': '10+ min late',
-  unknown: 'Unknown',
 };
 
-export function DelayDistributionChart({ data }: DelayDistributionChartProps) {
+export function DelayDistributionChart({ data, compact = false }: DelayDistributionChartProps) {
+  const height = compact ? 180 : 250;
+  const innerRadius = compact ? 35 : 50;
+  const outerRadius = compact ? 60 : 80;
+
   if (!data || data.length === 0) {
     return (
-      <div className="h-[250px] flex items-center justify-center text-muted-foreground">
-        <p>No delay data collected yet</p>
+      <div className={`h-[${height}px] flex items-center justify-center text-muted-foreground`}>
+        <p className={compact ? 'text-sm' : ''}>No delay data collected yet</p>
       </div>
     );
   }
@@ -56,14 +59,14 @@ export function DelayDistributionChart({ data }: DelayDistributionChartProps) {
   const total = chartData.reduce((sum, d) => sum + d.value, 0);
 
   return (
-    <ResponsiveContainer width="100%" height={250}>
+    <ResponsiveContainer width="100%" height={height}>
       <PieChart>
         <Pie
           data={chartData}
           cx="50%"
-          cy="50%"
-          innerRadius={50}
-          outerRadius={80}
+          cy={compact ? '45%' : '50%'}
+          innerRadius={innerRadius}
+          outerRadius={outerRadius}
           paddingAngle={2}
           dataKey="value"
         >
@@ -87,9 +90,10 @@ export function DelayDistributionChart({ data }: DelayDistributionChartProps) {
         />
         <Legend
           verticalAlign="bottom"
-          height={36}
+          height={compact ? 28 : 36}
+          iconSize={compact ? 8 : 14}
           formatter={(value) => (
-            <span style={{ color: '#fff', fontSize: '12px' }}>{value}</span>
+            <span style={{ color: '#fff', fontSize: compact ? '10px' : '12px' }}>{value}</span>
           )}
         />
       </PieChart>
