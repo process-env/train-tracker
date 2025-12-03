@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { loadStops, filterStopsByRoute } from '@/lib/mta';
+import { apiError, internalError } from '@/lib/api/errors';
 
 export async function GET(
   request: NextRequest,
@@ -9,10 +10,7 @@ export async function GET(
     const { routeId } = await params;
 
     if (!routeId) {
-      return NextResponse.json(
-        { error: 'Route ID is required' },
-        { status: 400 }
-      );
+      return apiError('BAD_REQUEST', 'Route ID is required');
     }
 
     const { list } = await loadStops();
@@ -28,9 +26,6 @@ export async function GET(
     return NextResponse.json(filtered);
   } catch (error) {
     console.error('Error loading stops for route:', error);
-    return NextResponse.json(
-      { error: 'Failed to load stops' },
-      { status: 500 }
-    );
+    return internalError('Failed to load stops');
   }
 }

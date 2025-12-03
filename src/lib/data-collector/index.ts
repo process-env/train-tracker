@@ -224,19 +224,31 @@ export async function collectAlerts(): Promise<{
       });
     }
 
-    // Update existing alerts (mark as seen)
-    for (const alert of updatedAlerts) {
-      await db.alertLog.update({
-        where: { alertId: alert.id },
+    // Update existing alerts (mark as seen) - batch update to avoid N+1
+    if (updatedAlerts.length > 0) {
+      // First, batch update common fields for all updated alerts
+      await db.alertLog.updateMany({
+        where: { alertId: { in: updatedAlerts.map((a) => a.id) } },
         data: {
           lastSeen: now,
           isActive: true,
-          headerText: alert.headerText,
-          descriptionText: alert.descriptionHtml,
-          affectedRoutes: alert.affectedRoutes,
-          affectedStops: alert.affectedStops,
         },
       });
+
+      // Then update individual alerts with their specific data using transaction
+      await db.$transaction(
+        updatedAlerts.map((alert) =>
+          db.alertLog.update({
+            where: { alertId: alert.id },
+            data: {
+              headerText: alert.headerText,
+              descriptionText: alert.descriptionHtml,
+              affectedRoutes: alert.affectedRoutes,
+              affectedStops: alert.affectedStops,
+            },
+          })
+        )
+      );
     }
 
     // Mark alerts not in current feed as inactive

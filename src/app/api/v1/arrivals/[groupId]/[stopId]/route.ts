@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getArrivalBoard } from '@/lib/mta';
+import { internalError } from '@/lib/api/errors';
 
 export async function GET(
   request: NextRequest,
@@ -15,9 +16,6 @@ export async function GET(
     return NextResponse.json(board);
   } catch (error) {
     console.error('Error getting arrivals:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to get arrivals' },
-      { status: 500 }
-    );
+    return internalError(error instanceof Error ? error.message : 'Failed to get arrivals');
   }
 }

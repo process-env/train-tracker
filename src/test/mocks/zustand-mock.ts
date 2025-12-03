@@ -80,15 +80,9 @@ export function spyOnStoreAction<T extends object, K extends keyof T>(
  */
 export const initialTrainsState = {
   trains: {},
-  arrivalsByStation: {},
-  lastFeedUpdate: {},
 };
 
 export const initialAlertsState = {
-  alerts: [],
-  lastFetch: null,
-  isLoading: false,
-  error: null,
   dismissedIds: new Set<string>(),
 };
 
@@ -100,12 +94,4 @@ export const initialUIState = {
   selectedRouteIds: [] as string[],
   mapCenter: [-73.9857, 40.7484] as [number, number],
   mapZoom: 12,
-};
-
-export const initialStationsState = {
-  stations: {},
-  routes: {},
-  parentStations: [] as string[],
-  isLoading: false,
-  error: null,
 };

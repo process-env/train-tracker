@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getArrivalsForStop } from '@/lib/mta';
+import { internalError } from '@/lib/api/errors';
 
 /**
  * GET /api/v1/arrivals/station/{stationId}
@@ -48,9 +49,6 @@ export async function GET(
     });
   } catch (error) {
     console.error('Error getting station arrivals:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to get arrivals' },
-      { status: 500 }
-    );
+    return internalError(error instanceof Error ? error.message : 'Failed to get arrivals');
   }
 }

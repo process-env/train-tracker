@@ -79,31 +79,38 @@ export function useAnalytics() {
     }));
   }, [trains]);
 
-  // Generate timeline data - placeholder for now (historical disabled)
+  // Generate timeline data based on current train count
+  // Shows real-time snapshot - historical data disabled for performance
   const timeline = useMemo<TimelineData[]>(() => {
     const now = new Date();
     const result: TimelineData[] = [];
+    const currentCount = trains.length;
+
     for (let i = 11; i >= 0; i--) {
       const time = new Date(now.getTime() - i * 5 * 60 * 1000);
+      // Use current train count for all time slots (historical disabled)
+      // This provides a baseline reference rather than fake random data
       result.push({
         time: time.toLocaleTimeString('en-US', {
           hour: '2-digit',
           minute: '2-digit',
         }),
-        arrivals: Math.floor(Math.random() * 50) + trains.length,
-        departures: Math.floor(Math.random() * 50) + trains.length,
+        arrivals: currentCount,
+        departures: currentCount,
       });
     }
     return result;
   }, [trains.length]);
 
   // Compute feed status from parallel queries
+  // Note: Using stable fallback timestamp to avoid memoization breaks
   const feedStatus = useMemo<FeedStatus[]>(() => {
+    const fallbackTimestamp = new Date().toISOString();
     return feedQueries.map((q, i) => {
       if (q.data) return q.data;
       return {
         feedId: FEED_GROUPS[i].id,
-        lastPoll: new Date().toISOString(),
+        lastPoll: fallbackTimestamp,
         tripCount: 0,
         status: q.isLoading ? ('stale' as const) : ('error' as const),
       };

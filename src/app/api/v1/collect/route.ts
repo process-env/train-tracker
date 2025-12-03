@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runCollection, cleanupOldData } from '@/lib/data-collector';
 import { parseQueryParams, collectQuerySchema } from '@/lib/validation/schemas';
+import { apiError, internalError } from '@/lib/api/errors';
 
 /**
  * POST /api/v1/collect
@@ -21,14 +22,14 @@ export async function POST(request: NextRequest) {
 
     if (!isNonProd && cronSecret) {
       if (authHeader !== `Bearer ${cronSecret}`) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return apiError('UNAUTHORIZED', 'Invalid or missing authorization');
       }
     }
 
     // Validate query params
     const validation = parseQueryParams(request.nextUrl.searchParams, collectQuerySchema);
     if (!validation.success) {
-      return NextResponse.json({ error: validation.error }, { status: 400 });
+      return apiError('BAD_REQUEST', validation.error);
     }
 
     const { cleanup: shouldCleanup, days: daysToKeep } = validation.data;
@@ -64,13 +65,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Collection error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return internalError(error instanceof Error ? error.message : 'Unknown error');
   }
 }
 
@@ -88,7 +83,7 @@ export async function GET(request?: NextRequest) {
 
     if (!isNonProd && cronSecret) {
       if (authHeader !== `Bearer ${cronSecret}`) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return apiError('UNAUTHORIZED', 'Invalid or missing authorization');
       }
     }
 
@@ -160,12 +155,6 @@ export async function GET(request?: NextRequest) {
     });
   } catch (error) {
     console.error('Stats error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return internalError(error instanceof Error ? error.message : 'Unknown error');
   }
 }

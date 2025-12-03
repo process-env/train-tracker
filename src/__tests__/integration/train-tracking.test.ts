@@ -1,18 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useTrainsStore } from '@/stores';
-import { createMockTrainPosition, createMockArrivalBoard } from '@/test/factories';
+import { createMockTrainPosition } from '@/test/factories';
 
 /**
  * Integration tests for the train tracking system
  * Tests the flow from feed data to store updates
+ *
+ * Note: Arrivals and feed timestamps are now handled by React Query,
+ * not stored in Zustand. These tests focus on train position tracking.
  */
 describe('Train Tracking Integration', () => {
   beforeEach(() => {
     // Reset store using setState
     useTrainsStore.setState({
       trains: {},
-      arrivalsByStation: {},
-      lastFeedUpdate: {},
     });
     vi.clearAllMocks();
   });
@@ -85,63 +86,27 @@ describe('Train Tracking Integration', () => {
     });
   });
 
-  describe('arrival predictions', () => {
-    it('stores arrival data by station', () => {
-      const board = createMockArrivalBoard({
-        stopId: '101',
-        arrivals: [
-          { stopId: '101N', routeId: 'A', whenISO: '2024-01-01T12:00:00Z' } as any,
-          { stopId: '101S', routeId: 'A', whenISO: '2024-01-01T12:05:00Z' } as any,
-        ],
-      });
+  describe('route filtering', () => {
+    it('filters trains by route case-insensitively', () => {
+      const positions = [
+        createMockTrainPosition({ tripId: 'trip-a1', routeId: 'A' }),
+        createMockTrainPosition({ tripId: 'trip-a2', routeId: 'A' }),
+        createMockTrainPosition({ tripId: 'trip-c', routeId: 'C' }),
+      ];
 
-      useTrainsStore.getState().updateArrivals('101', board);
+      useTrainsStore.getState().updateTrains(positions);
 
-      const stationData = useTrainsStore.getState().arrivalsByStation['101'];
-      expect(stationData.arrivals).toHaveLength(2);
+      const aTrains = useTrainsStore.getState().getTrainsByRoute('a');
+      expect(aTrains).toHaveLength(2);
     });
 
-    it('replaces arrivals on update', () => {
-      const board1 = createMockArrivalBoard({
-        stopId: '101',
-        arrivals: [{ stopId: '101N', routeId: 'A' } as any],
-      });
-      const board2 = createMockArrivalBoard({
-        stopId: '101',
-        arrivals: [
-          { stopId: '101N', routeId: 'C' } as any,
-          { stopId: '101N', routeId: 'E' } as any,
-        ],
-      });
+    it('returns empty array for unknown route', () => {
+      const positions = [createMockTrainPosition({ tripId: 'trip-a', routeId: 'A' })];
 
-      useTrainsStore.getState().updateArrivals('101', board1);
-      useTrainsStore.getState().updateArrivals('101', board2);
+      useTrainsStore.getState().updateTrains(positions);
 
-      const arrivals = useTrainsStore.getState().arrivalsByStation['101'].arrivals;
-      expect(arrivals).toHaveLength(2);
-      expect(arrivals[0].routeId).toBe('C');
-    });
-  });
-
-  describe('feed updates', () => {
-    it('tracks last feed update time', () => {
-      const timestamp = new Date().toISOString();
-      useTrainsStore.getState().setFeedTimestamp('ACE', timestamp);
-
-      const lastUpdate = useTrainsStore.getState().lastFeedUpdate['ACE'];
-      expect(lastUpdate).toBe(timestamp);
-    });
-
-    it('tracks multiple feed groups', () => {
-      const now = new Date();
-      const timestamp1 = now.toISOString();
-      const timestamp2 = new Date(now.getTime() + 1000).toISOString();
-
-      useTrainsStore.getState().setFeedTimestamp('ACE', timestamp1);
-      useTrainsStore.getState().setFeedTimestamp('BDFM', timestamp2);
-
-      expect(useTrainsStore.getState().lastFeedUpdate['ACE']).toBe(timestamp1);
-      expect(useTrainsStore.getState().lastFeedUpdate['BDFM']).toBe(timestamp2);
+      const zTrains = useTrainsStore.getState().getTrainsByRoute('Z');
+      expect(zTrains).toEqual([]);
     });
   });
 });

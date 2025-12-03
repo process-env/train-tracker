@@ -1,33 +1,29 @@
 'use client';
 
 import { create } from 'zustand';
-import type { TrainPosition, ArrivalItem, ArrivalBoard } from '@/types/mta';
+import type { TrainPosition } from '@/types/mta';
 
+/**
+ * Trains Store
+ *
+ * Manages real-time train position data.
+ * Note: Arrivals are now fetched via React Query (use-arrivals.ts),
+ * not stored in Zustand.
+ */
 interface TrainsState {
   // Real-time train positions
   trains: Record<string, TrainPosition>; // keyed by tripId
 
-  // Arrivals by station
-  arrivalsByStation: Record<string, ArrivalBoard>;
-
-  // Feed timestamps
-  lastFeedUpdate: Record<string, string>; // feedGroupId -> ISO timestamp
-
   // Actions
   updateTrains: (trains: TrainPosition[]) => void;
-  updateArrivals: (stationId: string, data: ArrivalBoard) => void;
-  setFeedTimestamp: (groupId: string, timestamp: string) => void;
   clearTrains: () => void;
 
   // Selectors
   getTrainsByRoute: (routeId: string) => TrainPosition[];
-  getArrivalsForStation: (stationId: string) => ArrivalItem[];
 }
 
 export const useTrainsStore = create<TrainsState>((set, get) => ({
   trains: {},
-  arrivalsByStation: {},
-  lastFeedUpdate: {},
 
   updateTrains: (newTrains) =>
     set((state) => {
@@ -38,22 +34,6 @@ export const useTrainsStore = create<TrainsState>((set, get) => ({
       return { trains };
     }),
 
-  updateArrivals: (stationId, data) =>
-    set((state) => ({
-      arrivalsByStation: {
-        ...state.arrivalsByStation,
-        [stationId]: data,
-      },
-    })),
-
-  setFeedTimestamp: (groupId, timestamp) =>
-    set((state) => ({
-      lastFeedUpdate: {
-        ...state.lastFeedUpdate,
-        [groupId]: timestamp,
-      },
-    })),
-
   clearTrains: () => set({ trains: {} }),
 
   getTrainsByRoute: (routeId) => {
@@ -62,10 +42,5 @@ export const useTrainsStore = create<TrainsState>((set, get) => ({
     return Object.values(trains).filter(
       (t) => t.routeId.toUpperCase() === upperRoute
     );
-  },
-
-  getArrivalsForStation: (stationId) => {
-    const { arrivalsByStation } = get();
-    return arrivalsByStation[stationId]?.arrivals || [];
   },
 }));

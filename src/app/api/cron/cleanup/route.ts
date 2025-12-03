@@ -1,4 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { unauthorized, internalError, rateLimited } from '@/lib/api/errors';
+import {
+  checkRateLimit,
+  getClientId,
+  createRateLimitKey,
+  RATE_LIMITS,
+} from '@/lib/api/rate-limit';
 
 /**
  * GET /api/cron/cleanup
@@ -13,21 +20,29 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 export async function GET(request: NextRequest) {
   try {
+    // Rate limit check (strict for admin endpoints)
+    const clientId = getClientId(request);
+    const key = createRateLimitKey(clientId, '/api/cron/cleanup');
+    const limit = checkRateLimit(key, RATE_LIMITS.admin);
+    if (!limit.success) {
+      return rateLimited(limit.resetIn);
+    }
+
     // Verify cron secret for security
     const authHeader = request.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
+    const isProduction = process.env.NODE_ENV === 'production';
 
-    // In development, allow without secret
-    const isDev = process.env.NODE_ENV === 'development';
+    // In production, CRON_SECRET is REQUIRED
+    if (isProduction && !cronSecret) {
+      console.error('Cron cleanup: CRON_SECRET not configured in production');
+      return internalError('Server misconfiguration: CRON_SECRET required');
+    }
 
-    if (!isDev && cronSecret) {
-      if (authHeader !== `Bearer ${cronSecret}`) {
-        console.warn('Cron cleanup: Unauthorized attempt');
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        );
-      }
+    // Validate authorization if secret is set
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+      console.warn('Cron cleanup: Unauthorized attempt');
+      return unauthorized();
     }
 
     // Dynamic import to avoid Turbopack module evaluation issues
@@ -63,12 +78,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Cron cleanup error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Cleanup failed',
-      },
-      { status: 500 }
-    );
+    return internalError(error instanceof Error ? error.message : 'Cleanup failed');
   }
 }

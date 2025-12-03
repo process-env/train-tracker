@@ -1,4 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { unauthorized, internalError, rateLimited } from '@/lib/api/errors';
+import {
+  checkRateLimit,
+  getClientId,
+  createRateLimitKey,
+  RATE_LIMITS,
+} from '@/lib/api/rate-limit';
 
 /**
  * GET /api/cron/collect
@@ -14,19 +21,29 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 export async function GET(request: NextRequest) {
   try {
-    // Optional: Verify cron secret for security
-    // To enable auth, set CRON_SECRET in Vercel and add Authorization header in cron-job.org
+    // Rate limit check (strict for admin endpoints)
+    const clientId = getClientId(request);
+    const key = createRateLimitKey(clientId, '/api/cron/collect');
+    const limit = checkRateLimit(key, RATE_LIMITS.admin);
+    if (!limit.success) {
+      return rateLimited(limit.resetIn);
+    }
+
+    // Verify cron secret for security
     const authHeader = request.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
+    const isProduction = process.env.NODE_ENV === 'production';
 
+    // In production, CRON_SECRET is REQUIRED
+    if (isProduction && !cronSecret) {
+      console.error('Cron collect: CRON_SECRET not configured in production');
+      return internalError('Server misconfiguration: CRON_SECRET required');
+    }
+
+    // Validate authorization if secret is set
     if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      // Only enforce auth if CRON_SECRET is set AND header doesn't match
-      // For cron-job.org without custom headers, leave CRON_SECRET unset in Vercel
       console.warn('Cron collect: Unauthorized attempt');
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return unauthorized();
     }
 
     // Dynamic imports to avoid Turbopack module evaluation issues
@@ -68,12 +85,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Cron collect error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Collection failed',
-      },
-      { status: 500 }
-    );
+    return internalError(error instanceof Error ? error.message : 'Collection failed');
   }
 }

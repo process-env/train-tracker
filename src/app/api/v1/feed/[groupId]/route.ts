@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchFeed } from '@/lib/mta';
+import { internalError } from '@/lib/api/errors';
 
 export async function GET(
   request: NextRequest,
@@ -15,9 +16,6 @@ export async function GET(
     return NextResponse.json(feed);
   } catch (error) {
     console.error('Error fetching feed:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to fetch feed' },
-      { status: 500 }
-    );
+    return internalError(error instanceof Error ? error.message : 'Failed to fetch feed');
   }
 }

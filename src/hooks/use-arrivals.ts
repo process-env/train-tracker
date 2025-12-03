@@ -3,7 +3,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { mtaApi } from '@/lib/api';
 import { queryKeys } from '@/lib/api/query-keys';
-import type { ArrivalBoard } from '@/types/mta';
 
 interface UseArrivalsOptions {
   refreshInterval?: number;
@@ -26,7 +25,7 @@ export function useArrivals(
   });
 
   return {
-    arrivals: query.data as ArrivalBoard | undefined,
+    arrivals: query.data,
     isLoading: query.isLoading,
     error: query.error?.message || null,
     refetch: query.refetch,

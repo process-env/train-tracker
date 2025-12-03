@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchFeed, fetchAllFeeds } from '@/lib/mta/fetch-feed';
 import { calculateTrainPositions } from '@/lib/mta/train-positions';
+import { internalError } from '@/lib/api/errors';
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,9 +22,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching trains:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to fetch trains' },
-      { status: 500 }
-    );
+    return internalError(error instanceof Error ? error.message : 'Failed to fetch trains');
   }
 }
