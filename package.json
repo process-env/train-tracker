@@ -39,6 +39,7 @@
     "protobufjs": "^7.5.4",
     "react": "19.2.0",
     "react-dom": "19.2.0",
+    "react-pdf": "^10.2.0",
     "recharts": "^3.5.1",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",

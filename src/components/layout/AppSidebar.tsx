@@ -7,7 +7,7 @@ import {
   BarChart3,
   Train,
   Bell,
-  Settings,
+  X,
 } from 'lucide-react';
 
 import {
@@ -25,8 +25,10 @@ import {
   SidebarRail,
   useSidebar,
 } from '@/components/ui/sidebar';
+import { Button } from '@/components/ui/button';
 import { usePrefetchAnalytics, useAlerts } from '@/hooks';
 import { RouteFilter } from './RouteFilter';
+import { SubwayMapModal } from './SubwayMapModal';
 
 const navItems = [
   { href: '/map', label: 'Live Map', icon: Map },
@@ -37,7 +39,7 @@ const navItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const { state } = useSidebar();
+  const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === 'collapsed';
   const { alerts } = useAlerts();
   const alertCount = alerts.length;
@@ -59,12 +61,23 @@ export function AppSidebar() {
                 </div>
               </Link>
             </SidebarMenuButton>
+            {!isCollapsed && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleSidebar}
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close sidebar</span>
+              </Button>
+            )}
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
 
       <SidebarContent>
-        {/* Navigation */}
+        {/* Navigation + Route Filters */}
         <SidebarGroup>
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarMenu>
@@ -96,11 +109,7 @@ export function AppSidebar() {
               );
             })}
           </SidebarMenu>
-        </SidebarGroup>
-
-        {/* Route Filters */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Filter Routes</SidebarGroupLabel>
+          <SidebarGroupLabel className="mt-4">Filter Routes</SidebarGroupLabel>
           <SidebarGroupContent>
             <RouteFilter compact={isCollapsed} />
           </SidebarGroupContent>
@@ -110,10 +119,7 @@ export function AppSidebar() {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Settings">
-              <Settings />
-              <span>Settings</span>
-            </SidebarMenuButton>
+            <SubwayMapModal tooltip="Subway Map" />
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
