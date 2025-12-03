@@ -27,5 +27,12 @@ export function usePrefetchStaticData() {
       queryFn: mtaApi.getEnrichedStations,
       staleTime: Infinity,
     });
+
+    // Prefetch historical data for analytics page (cached server-side for 5 min)
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.historical(24),
+      queryFn: () => mtaApi.getHistoricalData(24),
+      staleTime: 5 * 60 * 1000, // 5 minutes - matches server cache
+    });
   }, [queryClient]);
 }

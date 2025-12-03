@@ -229,7 +229,7 @@ export default function AnalyticsPage() {
           )}
 
           {/* Delay Distribution */}
-          <Card>
+          <Card className="min-h-[200px]">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">
                 Delay Distribution
@@ -248,7 +248,7 @@ export default function AnalyticsPage() {
           </Card>
 
           {/* Train History Chart */}
-          <Card>
+          <Card className="min-h-[200px]">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">
                 Train Activity (Last 24 Hours)

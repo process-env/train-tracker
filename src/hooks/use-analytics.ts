@@ -53,11 +53,12 @@ export function useAnalytics() {
     })),
   });
 
-  // Historical data query
+  // Historical data query - cached server-side for 5 min, keep in client cache for 30 min
   const historicalQuery = useQuery({
     queryKey: queryKeys.historical(24),
     queryFn: () => mtaApi.getHistoricalData(24),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000, // 5 minutes - refetch if stale
+    gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache even when unmounted
   });
 
   // Compute route activity from trains

@@ -14,7 +14,32 @@ import {
  * Get historical analytics data from collected snapshots
  * Query params:
  * - hours: Number of hours to look back (default: 24, max: 168)
+ *
+ * Performance: Results are cached server-side for 5 minutes to reduce DB load
  */
+
+// Server-side cache for historical data
+interface CacheEntry {
+  data: Record<string, unknown>;
+  timestamp: number;
+}
+const cache = new Map<string, CacheEntry>();
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+function getCachedResponse(key: string): Record<string, unknown> | null {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
+    cache.delete(key);
+    return null;
+  }
+  return entry.data;
+}
+
+function setCachedResponse(key: string, data: Record<string, unknown>): void {
+  cache.set(key, { data, timestamp: Date.now() });
+}
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -26,6 +51,13 @@ export async function GET(request: NextRequest) {
     }
 
     const { hours } = validation.data;
+
+    // Check cache first
+    const cacheKey = `historical-${hours}`;
+    const cached = getCachedResponse(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached);
+    }
 
     // Dynamic import to avoid Turbopack module evaluation issues
     const { db } = await import('@/lib/db');
@@ -157,7 +189,7 @@ export async function GET(request: NextRequest) {
     const economicImpact = calculateEconomicImpact(totalSnapshots, allTimeUniqueTrips.length);
     const environmentalImpact = calculateEnvironmentalImpact(economicImpact.estimatedRiders);
 
-    return NextResponse.json({
+    const responseData = {
       trainHistory,
       routeBreakdown: routeBreakdown.map((r) => ({
         routeId: r.routeId,
@@ -191,7 +223,12 @@ export async function GET(request: NextRequest) {
           : null,
       },
       timestamp: new Date().toISOString(),
-    });
+    };
+
+    // Cache the response
+    setCachedResponse(cacheKey, responseData);
+
+    return NextResponse.json(responseData);
   } catch (error) {
     console.error('Historical analytics error:', error);
     return NextResponse.json(
