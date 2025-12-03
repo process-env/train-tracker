@@ -1,4 +1,5 @@
 import type { Stop, Route, TrainPosition, ServiceAlert, ArrivalBoard } from '@/types/mta';
+import type { EquipmentStatusResponse } from '@/types/equipment';
 
 // Centralized API service layer
 export const mtaApi = {
@@ -95,6 +96,13 @@ export const mtaApi = {
   getRouteSchedule: async (routeId: string) => {
     const res = await fetch(`/api/v1/schedule?routeId=${routeId}`);
     if (!res.ok) throw new Error('Failed to fetch route schedule');
+    return res.json();
+  },
+
+  // Equipment (Elevator & Escalator) status
+  getEquipmentStatus: async (): Promise<EquipmentStatusResponse> => {
+    const res = await fetch('/api/v1/equipment');
+    if (!res.ok) throw new Error('Failed to fetch equipment status');
     return res.json();
   },
 };

@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   RouteActivityChart,
-  ArrivalsTimelineChart,
   FeedStatusCard,
   StatsCard,
   AlertStatusCard,
@@ -15,6 +14,7 @@ import {
   BusiestStationsCard,
   RouteProfileCard,
   ServiceSpanCard,
+  EquipmentStatusCard,
 } from '@/components/analytics';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useScheduleAnalytics } from '@/hooks/use-schedule-analytics';
@@ -179,19 +179,8 @@ export default function AnalyticsPage() {
             </CardContent>
           </Card>
 
-          {/* Arrivals Timeline */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Arrivals & Departures (Last Hour)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <Skeleton className="h-[300px]" />
-              ) : data ? (
-                <ArrivalsTimelineChart data={data.timeline} />
-              ) : null}
-            </CardContent>
-          </Card>
+          {/* Equipment Status */}
+          <EquipmentStatusCard />
         </div>
 
         {/* Bottom Grid */}

@@ -6,6 +6,7 @@ export { AlertStatusCard } from './AlertStatusCard';
 export { HistoricalDataCard } from './HistoricalDataCard';
 export { TrainHistoryChart } from './TrainHistoryChart';
 export { DelayDistributionChart } from './DelayDistributionChart';
+export { EquipmentStatusCard } from './EquipmentStatusCard';
 
 // Schedule Intelligence components
 export { ScheduleFrequencyCard } from './ScheduleFrequencyCard';

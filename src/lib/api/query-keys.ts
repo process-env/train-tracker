@@ -20,4 +20,7 @@ export const queryKeys = {
   // Schedule (GTFS static - very long cache)
   schedule: ['schedule'] as const,
   routeSchedule: (routeId: string) => ['schedule', routeId] as const,
+
+  // Equipment (Elevator & Escalator)
+  equipment: ['equipment'] as const,
 };

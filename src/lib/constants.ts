@@ -60,7 +60,7 @@ export const ALL_ROUTES = [
   'A', 'C', 'E', 'B', 'D', 'F', 'M',
   'G', 'J', 'Z', 'L',
   'N', 'Q', 'R', 'W',
-  'S', 'SI',
+  'GS', 'FS', 'H', 'SI', // GS=42nd St, FS=Franklin Ave, H=Rockaway, SI=Staten Island
 ];
 
 export function getRouteColor(routeId: string): string {
