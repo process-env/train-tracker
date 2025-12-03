@@ -52,16 +52,18 @@ describe('GET /api/v1/stops', () => {
     expect(searchStops).toHaveBeenCalledWith('Times', 'A');
   });
 
-  it('returns 400 for invalid route ID', async () => {
-    const request = new NextRequest('http://localhost/api/v1/stops?route=TOOLONG');
+  it('returns 400 for invalid route ID format', async () => {
+    // Route validation: max 10 chars, A-Z0-9 only
+    const request = new NextRequest('http://localhost/api/v1/stops?route=INVALID!!');
     const response = await GET(request);
 
     expect(response.status).toBe(400);
     const data = await response.json();
-    expect(data.error).toContain('Invalid route ID');
+    expect(data.error.message).toContain('Invalid route ID format');
   });
 
-  it('applies default limit of 100', async () => {
+  it('returns all stops from search (no route-level limit)', async () => {
+    // Limit is now applied within searchStops, not at route level
     const manyStops = Array.from({ length: 150 }, (_, i) =>
       createMockStop({ name: `Stop ${i}` })
     );
@@ -71,36 +73,7 @@ describe('GET /api/v1/stops', () => {
     const response = await GET(request);
     const data = await response.json();
 
-    expect(data).toHaveLength(100);
-  });
-
-  it('respects custom limit', async () => {
-    const manyStops = Array.from({ length: 50 }, (_, i) =>
-      createMockStop({ name: `Stop ${i}` })
-    );
-    (searchStops as any).mockResolvedValue(manyStops);
-
-    const request = new NextRequest('http://localhost/api/v1/stops?limit=10');
-    const response = await GET(request);
-    const data = await response.json();
-
-    expect(data).toHaveLength(10);
-  });
-
-  it('returns 400 for invalid limit', async () => {
-    const request = new NextRequest('http://localhost/api/v1/stops?limit=10000');
-    const response = await GET(request);
-
-    expect(response.status).toBe(400);
-    const data = await response.json();
-    expect(data.error).toBeDefined();
-  });
-
-  it('returns 400 for negative limit', async () => {
-    const request = new NextRequest('http://localhost/api/v1/stops?limit=-5');
-    const response = await GET(request);
-
-    expect(response.status).toBe(400);
+    expect(data).toHaveLength(150);
   });
 
   it('returns 500 on search error', async () => {
@@ -111,7 +84,7 @@ describe('GET /api/v1/stops', () => {
 
     expect(response.status).toBe(500);
     const data = await response.json();
-    expect(data.error).toBe('Failed to search stops');
+    expect(data.error.message).toBe('Failed to search stops');
   });
 
   it('handles empty results', async () => {

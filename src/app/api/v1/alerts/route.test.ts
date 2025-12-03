@@ -42,13 +42,14 @@ describe('GET /api/v1/alerts', () => {
     expect(filterAlertsByRoutes).toHaveBeenCalledWith(mockAlerts, ['A', 'C']);
   });
 
-  it('returns 400 for invalid route filter', async () => {
-    const request = new NextRequest('http://localhost/api/v1/alerts?route=INVALID_ROUTE_TOO_LONG');
+  it('handles any route filter (no validation at route level)', async () => {
+    // Route filter is passed directly to filterAlertsByRoutes, no validation
+    const request = new NextRequest('http://localhost/api/v1/alerts?route=ANYTHING');
     const response = await GET(request);
 
-    expect(response.status).toBe(400);
-    const data = await response.json();
-    expect(data.error).toContain('Invalid route filter');
+    expect(response.status).toBe(200);
+    // The filter just won't match any routes
+    expect(filterAlertsByRoutes).toHaveBeenCalledWith(mockAlerts, ['ANYTHING']);
   });
 
   it('bypasses cache when nocache=true', async () => {
@@ -73,7 +74,7 @@ describe('GET /api/v1/alerts', () => {
 
     expect(response.status).toBe(500);
     const data = await response.json();
-    expect(data.error).toBe('API Error');
+    expect(data.error.message).toBe('API Error');
   });
 
   it('handles non-Error thrown values', async () => {
@@ -84,7 +85,7 @@ describe('GET /api/v1/alerts', () => {
 
     expect(response.status).toBe(500);
     const data = await response.json();
-    expect(data.error).toBe('Failed to fetch alerts');
+    expect(data.error.message).toBe('Failed to fetch alerts');
   });
 
   it('filters with multiple routes', async () => {

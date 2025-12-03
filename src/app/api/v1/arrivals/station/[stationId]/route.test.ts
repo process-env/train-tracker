@@ -132,7 +132,7 @@ describe('GET /api/v1/arrivals/station/[stationId]', () => {
     const data = await response.json();
 
     expect(response.status).toBe(500);
-    expect(data.error).toBe('Network error');
+    expect(data.error.message).toBe('Network error');
   });
 
   it('handles non-Error thrown values', async () => {
@@ -143,7 +143,7 @@ describe('GET /api/v1/arrivals/station/[stationId]', () => {
     const data = await response.json();
 
     expect(response.status).toBe(500);
-    expect(data.error).toBe('Failed to get arrivals');
+    expect(data.error.message).toBe('Failed to get arrivals');
   });
 
   it('correctly builds stop IDs from station ID', async () => {

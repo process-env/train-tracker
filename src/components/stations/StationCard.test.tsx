@@ -10,12 +10,26 @@ vi.mock('next/link', () => ({
   ),
 }));
 
+// Mock next/navigation
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+  }),
+  usePathname: () => '/stations',
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 describe('StationCard', () => {
   it('renders station name', () => {
-    const station = createMockStop({ name: 'Times Square' });
+    const station = createMockStop({ name: 'Times Square', crossStreet: 'Broadway' });
     render(<StationCard station={station} />);
 
-    expect(screen.getByText('Times Square')).toBeInTheDocument();
+    // Station name is rendered in h3
+    expect(screen.getByRole('heading', { name: 'Times Square' })).toBeInTheDocument();
   });
 
   it('renders route badges', () => {
@@ -44,11 +58,12 @@ describe('StationCard', () => {
     expect(screen.getByText('+4')).toBeInTheDocument();
   });
 
-  it('renders coordinates', () => {
-    const station = createMockStop({ lat: 40.7128, lon: -74.006 });
+  it('renders location name (cross street or station name)', () => {
+    const station = createMockStop({ name: 'Penn Station', crossStreet: '7th Avenue' });
     render(<StationCard station={station} />);
 
-    expect(screen.getByText(/40\.7128.*-74\.0060/)).toBeInTheDocument();
+    // Cross street is shown as location
+    expect(screen.getByText('7th Avenue')).toBeInTheDocument();
   });
 
   it('links to station detail page', () => {
@@ -59,37 +74,36 @@ describe('StationCard', () => {
     expect(link).toHaveAttribute('href', '/stations/101');
   });
 
-  it('renders cross street from enriched name', () => {
+  it('renders cross street from station data', () => {
     const station = createMockStop({
       name: '157 St',
-      enrichedName: '157 St (Broadway)',
+      crossStreet: 'Broadway',
     });
     render(<StationCard station={station} />);
 
-    expect(screen.getByText('& Broadway')).toBeInTheDocument();
+    expect(screen.getByText('Broadway')).toBeInTheDocument();
   });
 
   it('takes first cross street when multiple present', () => {
     const station = createMockStop({
       name: '231 St',
-      enrichedName: '231 St (Broadway, US Highway 9)',
+      crossStreet: 'Broadway, US Highway 9',
     });
     render(<StationCard station={station} />);
 
-    expect(screen.getByText('& Broadway')).toBeInTheDocument();
+    expect(screen.getByText('Broadway')).toBeInTheDocument();
     expect(screen.queryByText(/US Highway/)).not.toBeInTheDocument();
   });
 
-  it('does not render cross street when enriched name matches original', () => {
+  it('shows station name when no cross street', () => {
     const station = createMockStop({
       name: 'Times Square',
-      enrichedName: 'Times Square',
+      crossStreet: undefined,
     });
     render(<StationCard station={station} />);
 
-    // Should not have the "& " prefix anywhere
-    const crossStreetElements = screen.queryAllByText(/^&/);
-    expect(crossStreetElements).toHaveLength(0);
+    // Should show station name as the location
+    expect(screen.getAllByText('Times Square').length).toBeGreaterThanOrEqual(1);
   });
 
   it('handles station with no routes', () => {

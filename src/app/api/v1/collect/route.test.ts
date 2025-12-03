@@ -114,8 +114,7 @@ describe('POST /api/v1/collect', () => {
 
     expect(response.status).toBe(500);
     const data = await response.json();
-    expect(data.success).toBe(false);
-    expect(data.error).toBe('Database connection failed');
+    expect(data.error.message).toBe('Database connection failed');
   });
 });
 
@@ -185,6 +184,7 @@ describe('GET /api/v1/collect (stats)', () => {
 
     expect(response.status).toBe(500);
     const data = await response.json();
-    expect(data.success).toBe(false);
+    expect(data.error.message).toBe('DB Error');
+    expect(data.error.code).toBe('INTERNAL_ERROR');
   });
 });

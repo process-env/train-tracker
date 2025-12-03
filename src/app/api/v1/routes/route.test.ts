@@ -43,7 +43,8 @@ describe('GET /api/v1/routes', () => {
 
     expect(response.status).toBe(500);
     const data = await response.json();
-    expect(data.error).toBe('Failed to load routes');
+    expect(data.error.message).toBe('File not found');
+    expect(data.error.code).toBe('INTERNAL_ERROR');
   });
 
   it('handles empty routes list', async () => {

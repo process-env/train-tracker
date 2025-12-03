@@ -62,8 +62,9 @@ describe('useAnalytics', () => {
   it('calculates route activity from trains', async () => {
     const { result } = renderHook(() => useAnalytics(), { wrapper: QueryWrapper });
 
+    // Wait for trains data to load (stats.totalTrains > 0 means trains are loaded)
     await waitFor(() => {
-      expect(result.current.data).not.toBeNull();
+      expect(result.current.data?.stats.totalTrains).toBeGreaterThan(0);
     });
 
     const routeA = result.current.data?.routeActivity.find((r) => r.routeId === 'A');
@@ -89,8 +90,9 @@ describe('useAnalytics', () => {
   it('calculates stats', async () => {
     const { result } = renderHook(() => useAnalytics(), { wrapper: QueryWrapper });
 
+    // Wait for trains data to actually load (not just stats object existing)
     await waitFor(() => {
-      expect(result.current.data?.stats).toBeDefined();
+      expect(result.current.data?.stats.totalTrains).toBeGreaterThan(0);
     });
 
     expect(result.current.data?.stats.totalTrains).toBe(3);

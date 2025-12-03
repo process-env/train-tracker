@@ -1,206 +1,45 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { NextRequest } from 'next/server';
+import { GET } from './route';
 
-// Note: This route uses dynamic import (`await import('@/lib/db')`)
-// which is difficult to mock properly. We test what we can:
-// - Validation logic (hours parameter)
-// - Error responses
-
+/**
+ * Tests for the disabled historical analytics route
+ *
+ * NOTE: This route was disabled for performance reasons (took 49+ seconds).
+ * It now returns empty data immediately with a disabled flag.
+ */
 describe('GET /api/v1/analytics/historical', () => {
-  describe('input validation', () => {
-    // Import the route handler dynamically in each test
-    it('returns 400 for hours > 168', async () => {
-      // Create the mock db
-      const mockDb = {
-        trainSnapshot: {
-          findMany: vi.fn().mockResolvedValue([]),
-          count: vi.fn().mockResolvedValue(0),
-          findFirst: vi.fn().mockResolvedValue(null),
-          groupBy: vi.fn().mockResolvedValue([]),
-        },
-        arrivalEvent: {
-          findMany: vi.fn().mockResolvedValue([]),
-          count: vi.fn().mockResolvedValue(0),
-        },
-        alertLog: { count: vi.fn().mockResolvedValue(0) },
-        feedPollLog: { findFirst: vi.fn().mockResolvedValue(null) },
-      };
+  it('returns empty data with disabled flag', async () => {
+    const request = new NextRequest('http://localhost/api/v1/analytics/historical');
+    const response = await GET(request);
+    const data = await response.json();
 
-      vi.doMock('@/lib/db', () => ({ db: mockDb }));
+    expect(response.status).toBe(200);
+    expect(data.disabled).toBe(true);
+    expect(data.trainHistory).toEqual([]);
+    expect(data.routeBreakdown).toEqual([]);
+    expect(data.delayDistribution).toEqual([]);
+    expect(data.timestamp).toBeDefined();
+  });
 
-      const { GET } = await import('./route');
-      const request = new NextRequest('http://localhost/api/v1/analytics/historical?hours=200');
-      const response = await GET(request);
+  it('returns empty data regardless of hours parameter', async () => {
+    const request = new NextRequest('http://localhost/api/v1/analytics/historical?hours=24');
+    const response = await GET(request);
+    const data = await response.json();
 
-      expect(response.status).toBe(400);
-      const data = await response.json();
-      expect(data.error).toBeDefined();
+    expect(response.status).toBe(200);
+    expect(data.disabled).toBe(true);
+  });
 
-      vi.doUnmock('@/lib/db');
-    });
+  it('includes collection stats showing zero data', async () => {
+    const request = new NextRequest('http://localhost/api/v1/analytics/historical');
+    const response = await GET(request);
+    const data = await response.json();
 
-    it('returns 400 for hours < 1', async () => {
-      const mockDb = {
-        trainSnapshot: {
-          findMany: vi.fn().mockResolvedValue([]),
-          count: vi.fn().mockResolvedValue(0),
-          findFirst: vi.fn().mockResolvedValue(null),
-          groupBy: vi.fn().mockResolvedValue([]),
-        },
-        arrivalEvent: {
-          findMany: vi.fn().mockResolvedValue([]),
-          count: vi.fn().mockResolvedValue(0),
-        },
-        alertLog: { count: vi.fn().mockResolvedValue(0) },
-        feedPollLog: { findFirst: vi.fn().mockResolvedValue(null) },
-      };
-
-      vi.doMock('@/lib/db', () => ({ db: mockDb }));
-
-      const { GET } = await import('./route');
-      const request = new NextRequest('http://localhost/api/v1/analytics/historical?hours=0');
-      const response = await GET(request);
-
-      expect(response.status).toBe(400);
-
-      vi.doUnmock('@/lib/db');
-    });
-
-    it('returns 400 for negative hours', async () => {
-      const mockDb = {
-        trainSnapshot: {
-          findMany: vi.fn().mockResolvedValue([]),
-          count: vi.fn().mockResolvedValue(0),
-          findFirst: vi.fn().mockResolvedValue(null),
-          groupBy: vi.fn().mockResolvedValue([]),
-        },
-        arrivalEvent: {
-          findMany: vi.fn().mockResolvedValue([]),
-          count: vi.fn().mockResolvedValue(0),
-        },
-        alertLog: { count: vi.fn().mockResolvedValue(0) },
-        feedPollLog: { findFirst: vi.fn().mockResolvedValue(null) },
-      };
-
-      vi.doMock('@/lib/db', () => ({ db: mockDb }));
-
-      const { GET } = await import('./route');
-      const request = new NextRequest('http://localhost/api/v1/analytics/historical?hours=-5');
-      const response = await GET(request);
-
-      expect(response.status).toBe(400);
-
-      vi.doUnmock('@/lib/db');
-    });
-
-    it('returns 400 for non-numeric hours', async () => {
-      const mockDb = {
-        trainSnapshot: {
-          findMany: vi.fn().mockResolvedValue([]),
-          count: vi.fn().mockResolvedValue(0),
-          findFirst: vi.fn().mockResolvedValue(null),
-          groupBy: vi.fn().mockResolvedValue([]),
-        },
-        arrivalEvent: {
-          findMany: vi.fn().mockResolvedValue([]),
-          count: vi.fn().mockResolvedValue(0),
-        },
-        alertLog: { count: vi.fn().mockResolvedValue(0) },
-        feedPollLog: { findFirst: vi.fn().mockResolvedValue(null) },
-      };
-
-      vi.doMock('@/lib/db', () => ({ db: mockDb }));
-
-      const { GET } = await import('./route');
-      const request = new NextRequest('http://localhost/api/v1/analytics/historical?hours=abc');
-      const response = await GET(request);
-
-      expect(response.status).toBe(400);
-
-      vi.doUnmock('@/lib/db');
-    });
-
-    it('accepts valid hours value of 24', async () => {
-      const mockDb = {
-        trainSnapshot: {
-          findMany: vi.fn().mockResolvedValue([]),
-          count: vi.fn().mockResolvedValue(0),
-          findFirst: vi.fn().mockResolvedValue(null),
-          groupBy: vi.fn().mockResolvedValue([]),
-        },
-        arrivalEvent: {
-          findMany: vi.fn().mockResolvedValue([]),
-          count: vi.fn().mockResolvedValue(0),
-        },
-        alertLog: { count: vi.fn().mockResolvedValue(0) },
-        feedPollLog: { findFirst: vi.fn().mockResolvedValue(null) },
-      };
-
-      vi.doMock('@/lib/db', () => ({ db: mockDb }));
-
-      const { GET } = await import('./route');
-      const request = new NextRequest('http://localhost/api/v1/analytics/historical?hours=24');
-      const response = await GET(request);
-
-      // Should not return validation error
-      expect(response.status).not.toBe(400);
-
-      vi.doUnmock('@/lib/db');
-    });
-
-    it('accepts valid hours value of 168', async () => {
-      const mockDb = {
-        trainSnapshot: {
-          findMany: vi.fn().mockResolvedValue([]),
-          count: vi.fn().mockResolvedValue(0),
-          findFirst: vi.fn().mockResolvedValue(null),
-          groupBy: vi.fn().mockResolvedValue([]),
-        },
-        arrivalEvent: {
-          findMany: vi.fn().mockResolvedValue([]),
-          count: vi.fn().mockResolvedValue(0),
-        },
-        alertLog: { count: vi.fn().mockResolvedValue(0) },
-        feedPollLog: { findFirst: vi.fn().mockResolvedValue(null) },
-      };
-
-      vi.doMock('@/lib/db', () => ({ db: mockDb }));
-
-      const { GET } = await import('./route');
-      const request = new NextRequest('http://localhost/api/v1/analytics/historical?hours=168');
-      const response = await GET(request);
-
-      expect(response.status).not.toBe(400);
-
-      vi.doUnmock('@/lib/db');
-    });
-
-    it('uses default hours value of 24 when not provided', async () => {
-      const mockDb = {
-        trainSnapshot: {
-          findMany: vi.fn().mockResolvedValue([]),
-          count: vi.fn().mockResolvedValue(0),
-          findFirst: vi.fn().mockResolvedValue(null),
-          groupBy: vi.fn().mockResolvedValue([]),
-        },
-        arrivalEvent: {
-          findMany: vi.fn().mockResolvedValue([]),
-          count: vi.fn().mockResolvedValue(0),
-        },
-        alertLog: { count: vi.fn().mockResolvedValue(0) },
-        feedPollLog: { findFirst: vi.fn().mockResolvedValue(null) },
-      };
-
-      vi.doMock('@/lib/db', () => ({ db: mockDb }));
-
-      const { GET } = await import('./route');
-      const request = new NextRequest('http://localhost/api/v1/analytics/historical');
-      const response = await GET(request);
-
-      // Without hours param, uses default of 24 (better UX than requiring it)
-      expect(response.status).toBe(200);
-
-      vi.doUnmock('@/lib/db');
+    expect(data.collectionStats).toEqual({
+      totalSnapshots: 0,
+      totalArrivals: 0,
+      totalAlerts: 0,
     });
   });
 });

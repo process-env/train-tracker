@@ -59,7 +59,7 @@ describe('GET /api/cron/cleanup', () => {
 
     expect(response.status).toBe(401);
     const data = await response.json();
-    expect(data.error).toBe('Unauthorized');
+    expect(data.error.message).toBe('Unauthorized');
   });
 
   it('returns 401 when CRON_SECRET does not match (in production)', async () => {
@@ -88,11 +88,23 @@ describe('GET /api/cron/cleanup', () => {
 
   it('allows request in development without CRON_SECRET', async () => {
     vi.stubEnv('NODE_ENV', 'development');
-    vi.stubEnv('CRON_SECRET', 'test-secret');
+    // Note: CRON_SECRET is NOT set - test passes only when no secret configured
 
     const request = createMockNextRequest('/api/cron/cleanup');
     const response = await GET(request);
 
     expect(response.status).toBe(200);
+  });
+
+  it('requires auth in development when CRON_SECRET is set', async () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    vi.stubEnv('CRON_SECRET', 'test-secret');
+
+    // No auth header provided
+    const request = createMockNextRequest('/api/cron/cleanup');
+    const response = await GET(request);
+
+    // Should require auth even in development if CRON_SECRET is configured
+    expect(response.status).toBe(401);
   });
 });
