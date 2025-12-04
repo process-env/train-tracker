@@ -16,15 +16,25 @@ export default function StationsPage() {
 
   // Build lookup maps for derived data
   const stationData = useMemo(() => {
-    // Count trains approaching each station (by nextStopId)
+    // Count trains approaching each station within 5 minutes
+    const APPROACHING_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
+    const now = Date.now();
+
     const trainsPerStation: Record<string, number> = {};
     for (const train of trains) {
-      // nextStopId might be child stop, need to map to parent
-      const stopId = train.nextStopId;
-      // Try both the stop ID and its parent (remove N/S suffix)
-      const parentId = stopId?.replace(/[NS]$/, '');
-      if (parentId) {
-        trainsPerStation[parentId] = (trainsPerStation[parentId] || 0) + 1;
+      // Check if train is arriving soon (within threshold)
+      if (train.eta) {
+        const etaTime = new Date(train.eta).getTime();
+        const timeUntilArrival = etaTime - now;
+
+        // Only count if arriving within threshold and not in the past
+        if (timeUntilArrival > 0 && timeUntilArrival <= APPROACHING_THRESHOLD_MS) {
+          const stopId = train.nextStopId;
+          const parentId = stopId?.replace(/[NS]$/, '');
+          if (parentId) {
+            trainsPerStation[parentId] = (trainsPerStation[parentId] || 0) + 1;
+          }
+        }
       }
     }
 
